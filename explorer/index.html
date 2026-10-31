@@ -1,0 +1,77 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Darrow–Yannett Diagram</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600&family=JetBrains+Mono:wght@400;600&family=Source+Sans+3:wght@400;600;700&display=swap">
+<style>
+:root { --page:#fbfaf8; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --page:#14171c; color-scheme: dark } }
+:root[data-theme="dark"] { --page:#14171c; color-scheme: dark }
+body { background: var(--page); }
+</style>
+<style>body{margin:0}</style>
+</head>
+<body>
+
+<div id="root"></div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.3.1/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.3.1/umd/react-dom.production.min.js"></script>
+<script>
+(()=>{var P=Object.create;var W=Object.defineProperty;var J=Object.getOwnPropertyDescriptor;var j=Object.getOwnPropertyNames;var K=Object.getPrototypeOf,Q=Object.prototype.hasOwnProperty;var Z=(t,i)=>()=>(i||t((i={exports:{}}).exports,i),i.exports);var R=(t,i,s,y)=>{if(i&&typeof i=="object"||typeof i=="function")for(let a of j(i))!Q.call(t,a)&&a!==s&&W(t,a,{get:()=>i[a],enumerable:!(y=J(i,a))||y.enumerable});return t};var _=(t,i,s)=>(s=t!=null?P(K(t)):{},R(i||!t||!t.__esModule?W(s,"default",{value:t,enumerable:!0}):s,t));var O=Z((se,q)=>{q.exports=window.React});var H=_(O());var e=_(O()),v=14,p=28,m=290,ee={isotonic:290,hypotonic:0,hypertonic:600},oe={isotonic:"Same concentration as plasma (290 mOsm/L)",hypotonic:"Pure water (0 mOsm/L)",hypertonic:"More concentrated than plasma (600 mOsm/L)"},te={"isotonic-gain":"Isotonic saline (0.9% NaCl) infusion","isotonic-loss":"Diarrhea, hemorrhage","hypotonic-gain":"SIADH, excessive water drinking","hypotonic-loss":"Sweating, dehydration, diabetes insipidus","hypertonic-gain":"Hypertonic saline infusion, high NaCl intake","hypertonic-loss":"Adrenal insufficiency (NaCl loss)"};function B(t,i){let s=v*m+ee[t]*i,y=p*m,a=v+i,C=s/a,n=v+p+i,g=(s+y)/n,h=y/g,c=n-h;return{ecfBefore:a,osmBefore:C,osmAfter:g,icfAfter:h,ecfAfter:c}}var E=(t,i)=>t>i?1:t<-i?-1:0,u=t=>t.toFixed(1),x=t=>Math.round(t).toString(),ie=`
+.dy { --bg:#fbfaf8; --panel:#ffffff; --ink:#1e2430; --muted:#5d6675; --line:#d9dce2;
+  --icf:#f2a7b0; --icf-ink:#9b2f3d; --ecf:#9fdcae; --ecf-ink:#24703a; --osm:#c8312b; --accent:#2f5d9e;
+  --up:#24703a; --down:#9b2f3d;
+  --font-body: "Source Sans 3", "Segoe UI", system-ui, sans-serif;
+  --font-head: "Fraunces", Georgia, serif;
+  --font-num: "JetBrains Mono", ui-monospace, Menlo, monospace;
+  background:var(--bg); color:var(--ink); font-family:var(--font-body); font-size:15px; line-height:1.5;
+  max-width:980px; margin:0 auto; padding-block:20px 28px;
+  padding-left:max(16px, env(safe-area-inset-left, 0px)); padding-right:max(16px, env(safe-area-inset-right, 0px)); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .dy {
+  --bg:#14171c; --panel:#1c2027; --ink:#e7e9ee; --muted:#a2a9b5; --line:#343a45;
+  --icf:#b8606d; --icf-ink:#ffb9c2; --ecf:#4f9a64; --ecf-ink:#a8eebb; --osm:#ff6b61; --accent:#8fb4ee;
+  --up:#a8eebb; --down:#ffb9c2; } }
+:root[data-theme="dark"] .dy {
+  --bg:#14171c; --panel:#1c2027; --ink:#e7e9ee; --muted:#a2a9b5; --line:#343a45;
+  --icf:#b8606d; --icf-ink:#ffb9c2; --ecf:#4f9a64; --ecf-ink:#a8eebb; --osm:#ff6b61; --accent:#8fb4ee;
+  --up:#a8eebb; --down:#ffb9c2; }
+.dy h1 { font-family:var(--font-head); font-weight:600; font-size:1.7rem; line-height:1.15; margin:0 0 4px; text-wrap:balance; }
+.dy h2 { font-size:.75rem; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); margin:0 0 8px; font-weight:600; }
+.dy .sub { color:var(--muted); margin:0 0 18px; max-width:65ch; }
+.dy .controls { display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-bottom:18px; }
+.dy .seg { display:flex; flex-wrap:wrap; gap:6px; }
+.dy .seg button { font:inherit; padding:6px 12px; border:1px solid var(--line); background:var(--panel); color:var(--ink); border-radius:6px; cursor:pointer; }
+.dy .seg button[aria-pressed="true"] { background:var(--accent); border-color:var(--accent); color:var(--bg); }
+.dy button:focus-visible, .dy input:focus-visible { outline:2px solid var(--accent); outline-offset:2px; }
+.dy .note { color:var(--muted); font-size:.85rem; margin-top:6px; }
+.dy input[type=range] { width:100%; accent-color:var(--accent); }
+.dy .scale { display:flex; justify-content:space-between; font-size:.8rem; color:var(--muted); font-family:var(--font-num); }
+.dy .vol { font-family:var(--font-num); font-variant-numeric:tabular-nums; font-weight:600; }
+.dy .stage { display:flex; flex-wrap:wrap; align-items:center; gap:10px; margin-bottom:8px; }
+.dy .main { display:grid; grid-template-columns:minmax(0,1fr); max-width:720px; }
+.dy .figure { background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:12px; min-width:0; }
+.dy svg { display:block; width:100%; height:auto; }
+.dy svg text { fill:var(--muted); font-family:var(--font-num); font-size:13px; }
+.dy .readout { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-top:10px; font-variant-numeric:tabular-nums; }
+.dy .readout div { font-size:.8rem; color:var(--muted); }
+.dy .readout b { display:block; font-family:var(--font-num); font-size:1rem; color:var(--ink); }
+.dy .verdict { margin:18px 0 10px; display:flex; flex-wrap:wrap; gap:8px 14px; align-items:baseline; }
+.dy .chip { font-weight:700; font-size:1.05rem; }
+.dy .eg { color:var(--muted); }
+.dy ol.steps { list-style:none; padding:0; margin:0; display:grid; gap:10px; }
+.dy ol.steps li { display:grid; grid-template-columns:2rem minmax(0,1fr); gap:10px; background:var(--panel); border:1px solid var(--line); border-radius:8px; padding:12px; }
+.dy .num { font-family:var(--font-head); font-size:1.4rem; font-weight:600; color:var(--accent); line-height:1; }
+.dy .q { font-weight:700; }
+.dy .rule { color:var(--muted); margin:2px 0 6px; }
+.dy .ans { font-weight:600; }
+.dy .up { color:var(--up); } .dy .down { color:var(--down); }
+.dy footer { margin-top:20px; font-size:.75rem; color:var(--muted); }
+@media (max-width:640px) { .dy .controls { grid-template-columns:1fr; } .dy .readout { grid-template-columns:repeat(2,1fr); } }
+`,ne=()=>{let[t,i]=(0,e.useState)("hypotonic"),[s,y]=(0,e.useState)(-3),[a,C]=(0,e.useState)("after"),n=B(t,s),g=s>0,h=s===0,c=a==="before"?p:n.icfAfter,N=a==="before"?n.ecfBefore:n.ecfAfter,A=a==="before"?m:n.osmAfter,F=a==="before"?n.osmBefore:n.osmAfter,b=520,U=300,f=7,D=480,w=44,d=w+36*f,k=20,r=250,l=o=>r-Math.min(o,D)/D*(r-k),V=[0,100,200,300,400],M=E(s,.01),S=E(n.osmBefore-m,.5),$=E(n.icfAfter-p,.05),T=E(n.osmAfter-m,.5),L=o=>o>0?"\u2191":o<0?"\u2193":"\u2014",I=o=>o>0?"up":o<0?"down":"",X=T>0?"Hyperosmotic":T<0?"Hyposmotic":"Isosmotic",Y=n.ecfAfter>v+.05?"volume expansion":n.ecfAfter<v-.05?"volume contraction":"no volume change",z=h?"":te[`${t}-${g?"gain":"loss"}`];return e.default.createElement("div",{className:"dy"},e.default.createElement("style",null,ie),e.default.createElement("h1",null,"Darrow\u2013Yannett Diagram"),e.default.createElement("p",{className:"sub"},"Add or remove fluid from the body and watch where the water goes. Width of each block is volume; height is osmolarity, so block area is the solute it holds. Dashed outlines show the normal starting state."),e.default.createElement("div",{className:"controls"},e.default.createElement("div",null,e.default.createElement("h2",null,"Fluid type"),e.default.createElement("div",{className:"seg",role:"group","aria-label":"Fluid type"},["isotonic","hypotonic","hypertonic"].map(o=>e.default.createElement("button",{key:o,id:`tonicity-${o}`,"aria-pressed":t===o,onClick:()=>i(o)},o[0].toUpperCase()+o.slice(1)))),e.default.createElement("div",{className:"note"},oe[t])),e.default.createElement("div",null,e.default.createElement("h2",null,"Volume ",g?"gained":h?"changed":"lost",": ",e.default.createElement("span",{className:"vol"},u(Math.abs(s))," L")),e.default.createElement("input",{id:"fluid-volume",type:"range",min:-5,max:5,step:.5,value:s,"aria-label":"Fluid lost or gained, liters",onChange:o=>y(Number(o.target.value))}),e.default.createElement("div",{className:"scale"},e.default.createElement("span",null,"Lose 5 L"),e.default.createElement("span",null,"0"),e.default.createElement("span",null,"Gain 5 L")))),e.default.createElement("div",{className:"stage"},e.default.createElement("h2",{style:{margin:0}},"Show"),e.default.createElement("div",{className:"seg",role:"group","aria-label":"Stage"},e.default.createElement("button",{id:"stage-before","aria-pressed":a==="before",onClick:()=>C("before")},"Before water shift"),e.default.createElement("button",{id:"stage-after","aria-pressed":a==="after",onClick:()=>C("after")},"After water shift"))),e.default.createElement("div",{className:"main"},e.default.createElement("div",{className:"figure"},e.default.createElement("svg",{viewBox:`0 0 ${b} ${U}`,role:"img","aria-label":`ICF ${u(c)} liters at ${x(A)} milliosmoles; ECF ${u(N)} liters at ${x(F)} milliosmoles`},V.map(o=>e.default.createElement("g",{key:o},e.default.createElement("line",{x1:w,x2:b-10,y1:l(o),y2:l(o),stroke:"var(--line)",strokeWidth:"1"}),e.default.createElement("text",{x:w-6,y:l(o)+4,textAnchor:"end"},o))),e.default.createElement("text",{x:12,y:(k+r)/2,textAnchor:"middle",transform:`rotate(-90 12 ${(k+r)/2})`},"Osmolarity (mOsm/L)"),e.default.createElement("rect",{x:d-c*f,y:l(A),width:c*f,height:r-l(A),fill:"var(--icf)"}),e.default.createElement("rect",{x:d,y:l(F),width:N*f,height:r-l(F),fill:"var(--ecf)"}),e.default.createElement("rect",{x:d-p*f,y:l(m),width:p*f,height:r-l(m),fill:"none",stroke:"var(--ink)",strokeOpacity:"0.55",strokeDasharray:"5 4"}),e.default.createElement("rect",{x:d,y:l(m),width:v*f,height:r-l(m),fill:"none",stroke:"var(--ink)",strokeOpacity:"0.55",strokeDasharray:"5 4"}),e.default.createElement("line",{x1:w,x2:b-10,y1:l(m),y2:l(m),stroke:"var(--osm)",strokeDasharray:"3 3"}),e.default.createElement("text",{x:b-12,y:l(m)-4,textAnchor:"end",style:{fill:"var(--osm)"}},"normal 290"),e.default.createElement("line",{x1:d,x2:d,y1:k-6,y2:r,stroke:"var(--ink)",strokeWidth:"2"}),e.default.createElement("text",{x:d,y:k-8,textAnchor:"middle"},"cell membrane"),e.default.createElement("text",{x:d-c*f/2,y:r-12,textAnchor:"middle",style:{fill:"var(--icf-ink)",fontWeight:700}},"ICF"),e.default.createElement("text",{x:d+N*f/2,y:r-12,textAnchor:"middle",style:{fill:"var(--ecf-ink)",fontWeight:700}},"ECF"),e.default.createElement("line",{x1:w,x2:b-10,y1:r,y2:r,stroke:"var(--ink)"}),[30,20,10].map(o=>e.default.createElement("text",{key:`i${o}`,x:d-o*f,y:r+14,textAnchor:"middle"},o)),[10,20].map(o=>e.default.createElement("text",{key:`e${o}`,x:d+o*f,y:r+14,textAnchor:"middle"},o)),e.default.createElement("text",{x:d-8,y:r+34,textAnchor:"end"},"\u2190 ICF volume (L)"),e.default.createElement("text",{x:d+8,y:r+34,textAnchor:"start"},"ECF volume (L) \u2192")),e.default.createElement("div",{className:"readout"},e.default.createElement("div",null,"ICF volume",e.default.createElement("b",null,u(c)," L")),e.default.createElement("div",null,"ECF volume",e.default.createElement("b",null,u(N)," L")),e.default.createElement("div",null,"Osmolarity ICF / ECF",e.default.createElement("b",null,x(A)," / ",x(F))),e.default.createElement("div",null,"Cells",e.default.createElement("b",null,c>p+.05?"Swollen":c<p-.05?"Shrunken":"Normal"))))),e.default.createElement("div",{className:"verdict"},e.default.createElement("span",{className:"chip"},h?"Normal state":`${X} ${Y}`),z&&e.default.createElement("span",{className:"eg"},"e.g., ",z)),e.default.createElement("h2",null,"Three questions, in order"),e.default.createElement("ol",{className:"steps"},e.default.createElement("li",null,e.default.createElement("span",{className:"num"},"1"),e.default.createElement("div",null,e.default.createElement("div",{className:"q"},"Did the ECF gain or lose fluid?"),e.default.createElement("div",{className:"rule"},"Fluid always enters and leaves the body through the ECF. Gain \u2192 ECF volume up. Loss \u2192 ECF volume down."),e.default.createElement("div",{className:`ans ${I(M)}`},L(M)," ",h?"No change":`ECF volume ${g?"rises":"falls"} (${v} \u2192 ${u(n.ecfBefore)} L)`))),e.default.createElement("li",null,e.default.createElement("span",{className:"num"},"2"),e.default.createElement("div",null,e.default.createElement("div",{className:"q"},"Is that fluid more or less concentrated than plasma?"),e.default.createElement("div",{className:"rule"},"Gain dilute fluid or lose concentrated fluid \u2192 ECF osmolarity falls. Gain concentrated fluid or lose dilute fluid \u2192 it rises. Isotonic fluid \u2192 no change."),e.default.createElement("div",{className:`ans ${I(S)}`},L(S)," ",S===0?"ECF osmolarity unchanged (290)":`ECF osmolarity ${S>0?"rises":"falls"} (290 \u2192 ${x(n.osmBefore)})`))),e.default.createElement("li",null,e.default.createElement("span",{className:"num"},"3"),e.default.createElement("div",null,e.default.createElement("div",{className:"q"},"Does the ECF now differ from the cells?"),e.default.createElement("div",{className:"rule"},"Cells start at 290. Water moves toward the higher osmolarity until both sides match. ECF higher \u2192 water leaves cells (shrink). ECF lower \u2192 water enters cells (swell). Same \u2192 no shift."),e.default.createElement("div",{className:`ans ${I($)}`},$===0?"\u2014 No water shift; cells unchanged":`${L($)} Water moves ${$>0?"into":"out of"} cells: ICF ${p} \u2192 ${u(n.icfAfter)} L, ECF ends at ${u(n.ecfAfter)} L, both at ${x(n.osmAfter)} mOsm/L`)))),e.default.createElement("footer",null,"\xA9 2024 Ian Victor Joseph Murray \xB7 CC BY-NC-SA 4.0 \xB7 Model assumes 42 L total body water (ICF 28 L, ECF 14 L), 290 mOsm/L, and that cells neither gain nor lose solute."))},G=ne;window.ReactDOM.createRoot(document.getElementById("root")).render(H.default.createElement(G,null));window.__solve=B;})();
+</script>
+
+</body>
+</html>

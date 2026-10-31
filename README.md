@@ -1,37 +1,45 @@
-# Darrow_Yannet_Diagram- Fluid Balance and Tonicity Demonstration
-An interactive educational tool for understanding fluid compartments, osmolarity changes, and volume shifts in medical education.
+# Darrow–Yannett Diagram — Fluid Balance and Tonicity
 
-## Features
-- Real-time visualization of intracellular (ICF) and extracellular (ECF) fluid compartments
-- Interactive solution type selection (isotonic, hypotonic, hypertonic)
-- Volume change controls (-50% to +50%)
-- Dynamic osmolarity visualization
-- Cell-in-beaker visual representation
+Interactive tools for teaching fluid compartments, osmolarity and water shifts in medical education.
 
-## How to Use
-1. Select the type of solution (isotonic, hypotonic, or hypertonic)
-2. Use the volume change slider to simulate fluid contraction (-50% to 0%) or expansion (0% to 50%)
-3. Observe changes in:
-   - ICF and ECF volumes
-   - Osmolarity levels
-   - Cell size in the beaker visualization
+## Tools
 
-## Educational Purpose
-This simulator is designed to help medical students understand:
-- Fluid compartment dynamics
-- Osmotic effects of different solution types
-- Volume distribution between ICF and ECF
-- Relationship between fluid shifts and osmolarity
-- Visual representation of cellular response to osmotic changes
+### 1. Explorer — `explorer/`
+Gain or lose isotonic, hypotonic or hypertonic fluid and watch the ECF and ICF respond.
+- Mass-balance model: fluid enters and leaves through the ECF; cells keep their solute
+- **Before / after water shift** toggle shows the moment ECF and ICF osmolarity disagree, then the new equilibrium
+- Names each state (e.g., hyperosmotic volume contraction) with a clinical example
+- Three questions answered live:
+  1. Did the ECF gain or lose fluid?
+  2. Is that fluid more or less concentrated than plasma?
+  3. Does the ECF now differ from the cells? Water moves toward the higher osmolarity.
 
-## Implementation Details
-- Built using React and SVG for fluid visualizations
-- Base values:
-  - ECF: 14 units
-  - ICF: 28 units
-  - Base Osmolarity: 290 units
-- Real-time calculations for volume shifts and osmolarity changes
-- Color-coded visualization (ICF: pink, ECF: green)
+Open: `explorer/index.html`
+
+### 2. Bedside — `bedside/`
+A six-step case activity in bedside order, on a live diagram:
+1. Danger (brain, circulation)
+2. Wet or dry (exam → ECF volume)
+3. Sodium sets the tonicity line (glucose included)
+4. Predict the cells (drag the ICF edge)
+5. Read the kidney (urine osm and Na⁺ → cause)
+6. Treatment (where salt and water should go, then a fluid)
+
+8 cases: diarrhea, marathon runner, SIADH, heart failure, Addison's, elderly dehydration, lithium DI, hyperglycemia.
+`bedside/index.html` is self-contained and works offline.
+
+## Hosting
+With GitHub Pages on (Settings → Pages → Deploy from branch `main`):
+- Explorer: `https://imurra.github.io/Darrow_Yannet_Diagram/explorer/`
+- Bedside: `https://imurra.github.io/Darrow_Yannet_Diagram/bedside/`
+
+## Model
+- Baseline 42 L total body water: ICF 28 L, ECF 14 L, 290 mOsm/L
+- Effective osmoles (Na⁺ salts, glucose) stay in the ECF; ICF solute is fixed; urea crosses membranes freely
+- Directions of change have been checked for every fluid type, volume and case
+
+## Archive
+The original 2024 dashboard is in `archive/`. It was replaced because two loss cases moved water the wrong way; see `archive/README.md`.
 
 ## License
 Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License
@@ -39,9 +47,7 @@ Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License
 - Non-commercial use only
 - Educational use permitted
 - Share-alike requirement for derivative works
-- See LICENSE file for complete terms and conditions
 
 ## Contact
-For permissions and inquiries:
 Author: Ian Victor Joseph Murray
 Email: imurra@yahoo.com
