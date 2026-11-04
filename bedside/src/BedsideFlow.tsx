@@ -134,7 +134,7 @@ export default function BedsideFlow() {
   const [vol, setVol] = useState<Vol>();
   const [tonGuess, setTonGuess] = useState<Snap>();
   const [tonChecked, setTonChecked] = useState(false);
-  const [icfGuess, setIcfGuess] = useState<Snap>(0);
+  const [icfGuess, setIcfGuess] = useState<Snap>();
   const [icfChecked, setIcfChecked] = useState(false);
   const [water, setWater] = useState<'holding' | 'dumping'>();
   const [salt, setSalt] = useState<'holding' | 'losing'>();
@@ -158,7 +158,7 @@ export default function BedsideFlow() {
   const TL = treated ? labs(treated) : null;
 
   const reset = (i: number) => {
-    setCi(i); setStep(0); setMaxStep(0); setVol(undefined); setTonGuess(undefined); setTonChecked(false); setIcfGuess(0); setIcfChecked(false);
+    setCi(i); setStep(0); setMaxStep(0); setVol(undefined); setTonGuess(undefined); setTonChecked(false); setIcfGuess(undefined); setIcfChecked(false);
     setWater(undefined); setSalt(undefined); setCause(undefined); setKidneyChecked(false);
     setNeedEcf(undefined); setNeedCells(undefined); setNeedChecked(false); setFluid(undefined); setResult({});
   };
@@ -169,7 +169,7 @@ export default function BedsideFlow() {
   // What the diagram shows at each step
   const showEcf = step >= 1 && vol != null ? truth.ecf : null;
   const ton = step < 2 ? null : step > 2 || tonChecked ? L.effOsm : tonGuess != null ? TON_SNAPS[tonGuess] : NORMAL_TON;
-  const icfShown = step < 3 ? BASE.icf : icfChecked || step > 3 ? truth.icf : ICF_SNAPS[icfGuess];
+  const icfShown = step < 3 ? BASE.icf : icfChecked || step > 3 ? truth.icf : icfGuess != null ? ICF_SNAPS[icfGuess] : BASE.icf;
   const diag = step === 5 && treated && TL
     ? <Diagram ecf={treated.ecf} icf={treated.icf} ton={TL.effOsm} ghost={{ ecf: truth.ecf, icf: truth.icf, ton: L.effOsm }} />
     : <Diagram ecf={showEcf} icf={icfShown} ton={ton}
@@ -187,7 +187,7 @@ export default function BedsideFlow() {
   const redo = (n: number) => {
     if (n === 1) setVol(undefined);
     if (n === 2) { setTonGuess(undefined); setTonChecked(false); }
-    if (n === 3) { setIcfGuess(0); setIcfChecked(false); }
+    if (n === 3) { setIcfGuess(undefined); setIcfChecked(false); }
     if (n === 4) { setWater(undefined); setSalt(undefined); setCause(undefined); setKidneyChecked(false); }
     if (n === 5) { setNeedEcf(undefined); setNeedCells(undefined); setNeedChecked(false); setFluid(undefined); }
   };
@@ -328,7 +328,7 @@ export default function BedsideFlow() {
               <Choice label="ICF volume" value={icfGuess} disabled={icfChecked}
                 options={[{ v: -1 as Snap, text: 'Shrank' }, { v: 0 as Snap, text: 'Unchanged' }, { v: 1 as Snap, text: 'Swelled' }]}
                 onPick={setIcfGuess} />
-              {!icfChecked && <button className="primary" onClick={() => { setIcfChecked(true); record({ icf: icfGuess === truthIcfDir }); }}>Check</button>}
+              {!icfChecked && <button className="primary" disabled={icfGuess == null} onClick={() => { setIcfChecked(true); record({ icf: icfGuess === truthIcfDir }); }}>Check</button>}
               {icfChecked && <>
                 <Verdict ok={icfGuess === truthIcfDir}>{c.icfNote} ICF {f1(truth.icf)} L (normal 28).</Verdict>
                 <button className="primary" onClick={() => go(4)}>Ask the kidney</button>
