@@ -3,7 +3,7 @@
  * Copyright (c) 2026 Ian Victor Joseph Murray · CC BY-NC-SA 4.0
  * http://creativecommons.org/licenses/by-nc-sa/4.0/
  */
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { BASE, labs, run, treat, State } from './engine';
 import { CASES, FLUIDS, FluidId, Need, Vol } from './cases';
 
@@ -24,33 +24,24 @@ const dirOf = (d: number, eps: number): Snap => (d > eps ? 1 : d < -eps ? -1 : 0
 type DiagramProps = {
   ecf: number | null; icf: number; ton: number | null;
   ghost?: { ecf: number; icf: number; ton: number } | null;
-  icfDraggable?: boolean; onIcfSnap?: (s: Snap) => void; icfLabel?: string;
-  tonDraggable?: boolean; onTonSnap?: (s: Snap) => void;
+  predict?: 'icf' | 'ton' | null;   // main blocks are the student's prediction (drawn dashed)
+  wrongIcf?: number | null;         // outline of a wrong ICF prediction, kept after Check
+  wrongTon?: number | null;         // line of a wrong tonicity prediction, kept after Check
+  arrow?: Snap | null;              // water across the membrane: 1 into cells, -1 out, 0 no shift
 };
 
-function Diagram({ ecf, icf, ton, ghost, icfDraggable, onIcfSnap, icfLabel, tonDraggable, onTonSnap }: DiagramProps) {
+function Diagram({ ecf, icf, ton, ghost, predict, wrongIcf, wrongTon, arrow }: DiagramProps) {
   const W = 600, H = 320, PX = 9, left = 52, mem = left + 36 * PX, top = 24, bottom = 262, MAX = 380;
   const y = (o: number) => bottom - (Math.min(o, MAX) / MAX) * (bottom - top);
-  const svgRef = useRef<SVGSVGElement>(null);
-  const dragging = useRef<null | 'icf' | 'ton'>(null);
   const tonY = y(ton ?? NORMAL_TON);
-
-  const snapFromEvent = (e: React.PointerEvent) => {
-    const svg = svgRef.current; if (!svg || !dragging.current) return;
-    const pt = svg.createSVGPoint(); pt.x = e.clientX; pt.y = e.clientY;
-    const p = pt.matrixTransform(svg.getScreenCTM()!.inverse());
-    const nearest = (table: Record<Snap, number>, v: number) =>
-      ([-1, 0, 1] as Snap[]).reduce((a, b) => (Math.abs(table[b] - v) < Math.abs(table[a] - v) ? b : a));
-    if (dragging.current === 'icf' && onIcfSnap) onIcfSnap(nearest(ICF_SNAPS, (mem - p.x) / PX));
-    if (dragging.current === 'ton' && onTonSnap) onTonSnap(nearest(TON_SNAPS, ((bottom - p.y) / (bottom - top)) * MAX));
-  };
+  // Geometry as both attributes and style, so size changes animate.
+  const box = (x: number, yy: number, w: number, h: number) =>
+    ({ x, y: yy, width: w, height: h, style: { x, y: yy, width: w, height: h } as React.CSSProperties });
+  const ay = tonY + (bottom - tonY) * 0.42;
 
   return (
-    <svg ref={svgRef} viewBox={`0 0 ${W} ${H}`} className="dy-svg" role="img"
-      aria-label={`ICF ${f1(icf)} liters${ecf != null ? `, ECF ${f1(ecf)} liters` : ''}${ton != null ? `, tonicity ${f0(ton)}` : ''}`}
-      onPointerMove={e => { if (dragging.current) snapFromEvent(e); }}
-      onPointerUp={() => { dragging.current = null; }}
-      onPointerLeave={() => { dragging.current = null; }}>
+    <svg viewBox={`0 0 ${W} ${H}`} className="dy-svg" role="img"
+      aria-label={`${predict ? 'Your prediction: ' : ''}ICF ${f1(icf)} liters${ecf != null ? `, ECF ${f1(ecf)} liters` : ''}${ton != null ? `, tonicity ${f0(ton)}` : ''}`}>
       {[0, 100, 200, 300].map(t => (
         <g key={t}>
           <line x1={left} x2={W - 12} y1={y(t)} y2={y(t)} className="grid" />
@@ -60,8 +51,8 @@ function Diagram({ ecf, icf, ton, ghost, icfDraggable, onIcfSnap, icfLabel, tonD
       <text x={14} y={(top + bottom) / 2} textAnchor="middle" className="tick" transform={`rotate(-90 14 ${(top + bottom) / 2})`}>Tonicity (mOsm/L)</text>
 
       {/* compartments */}
-      <rect x={mem - icf * PX} y={tonY} width={icf * PX} height={bottom - tonY} className={`icf ${icfDraggable ? 'guess' : ''}`} />
-      {ecf != null && <rect x={mem} y={tonY} width={ecf * PX} height={bottom - tonY} className="ecf" />}
+      <rect {...box(mem - icf * PX, tonY, icf * PX, bottom - tonY)} className={`icf ${predict ? 'pred' : ''}`} />
+      {ecf != null && <rect {...box(mem, tonY, ecf * PX, bottom - tonY)} className={`ecf ${predict === 'ton' ? 'pred' : ''}`} />}
 
       {/* before-treatment outline */}
       {ghost && <>
@@ -75,23 +66,36 @@ function Diagram({ ecf, icf, ton, ghost, icfDraggable, onIcfSnap, icfLabel, tonD
       <line x1={left} x2={W - 12} y1={y(NORMAL_TON)} y2={y(NORMAL_TON)} className="ref" />
       <text x={W - 14} y={y(NORMAL_TON) - 6} textAnchor="end" className="reftext">normal 285</text>
 
+      {/* a wrong prediction stays visible next to the answer */}
+      {wrongIcf != null && <>
+        <rect x={mem - wrongIcf * PX} y={tonY} width={wrongIcf * PX} height={bottom - tonY} className="wrongpred" />
+        <text x={mem - wrongIcf * PX + 6} y={tonY - 6} className="predtext">your prediction</text>
+      </>}
+      {wrongTon != null && <>
+        <line x1={left} x2={W - 12} y1={y(wrongTon)} y2={y(wrongTon)} className="wrongline" />
+        <text x={left + 6} y={y(wrongTon) - 6} className="predtext">your prediction</text>
+      </>}
+      {predict === 'ton' && <text x={left + 6} y={tonY - 6} className="predtext">your line</text>}
+
       <line x1={mem} x2={mem} y1={top - 8} y2={bottom} className="membrane" />
       <text x={mem} y={top - 12} textAnchor="middle" className="tick">cell membrane</text>
 
-      <text x={mem - (icf * PX) / 2} y={bottom - 14} textAnchor="middle" className="lab icf-t">{icfLabel ?? 'ICF'}</text>
+      {/* water across the membrane */}
+      {arrow === 1 && <g className="arrow">
+        <line x1={mem + 56} x2={mem - 52} y1={ay} y2={ay} />
+        <path d={`M ${mem - 64} ${ay} l 14 -8 v 16 z`} />
+        <text x={mem} y={ay - 12} textAnchor="middle" className="arrowtext">water in</text>
+      </g>}
+      {arrow === -1 && <g className="arrow">
+        <line x1={mem - 56} x2={mem + 52} y1={ay} y2={ay} />
+        <path d={`M ${mem + 64} ${ay} l -14 -8 v 16 z`} />
+        <text x={mem} y={ay - 12} textAnchor="middle" className="arrowtext">water out</text>
+      </g>}
+      {arrow === 0 && <text x={mem} y={ay} textAnchor="middle" className="arrowtext">no water shift</text>}
+
+      <text x={mem - (icf * PX) / 2} y={bottom - 14} textAnchor="middle" className="lab icf-t">{predict === 'icf' ? 'ICF (your prediction)' : 'ICF'}</text>
       {ecf != null && <text x={mem + (ecf * PX) / 2} y={bottom - 14} textAnchor="middle" className="lab ecf-t">ECF</text>}
       {ecf == null && <text x={mem + 63} y={(top + bottom) / 2 + 30} textAnchor="middle" className="tick">ECF: examine first</text>}
-
-      {icfDraggable && (
-        <rect x={mem - icf * PX - 9} y={tonY + (bottom - tonY) / 2 - 26} width={18} height={52} rx={6} className="handle"
-          onPointerDown={e => { dragging.current = 'icf'; (e.target as Element).setPointerCapture?.(e.pointerId); snapFromEvent(e); }} />
-      )}
-      {tonDraggable && <>
-        <line x1={left} x2={W - 12} y1={tonY} y2={tonY} className="tonline" />
-        <rect x={mem + 70} y={tonY - 9} width={56} height={18} rx={6} className="handle ton"
-          onPointerDown={e => { dragging.current = 'ton'; (e.target as Element).setPointerCapture?.(e.pointerId); snapFromEvent(e); }} />
-        <text x={mem + 98} y={tonY - 14} textAnchor="middle" className="tick">drag</text>
-      </>}
 
       <line x1={left} x2={W - 12} y1={bottom} y2={bottom} className="axis" />
       {[30, 20, 10].map(v => <text key={`i${v}`} x={mem - v * PX} y={bottom + 16} textAnchor="middle" className="tick">{v}</text>)}
@@ -145,6 +149,7 @@ export default function BedsideFlow() {
   const [needChecked, setNeedChecked] = useState(false);
   const [fluid, setFluid] = useState<FluidId>();
   const [result, setResult] = useState<Result>({});
+  const [flash, setFlash] = useState(0);
   const [history, setHistory] = useState<Record<string, Result>>({});
 
   const c = CASES[ci];
@@ -173,9 +178,10 @@ export default function BedsideFlow() {
   const diag = step === 5 && treated && TL
     ? <Diagram ecf={treated.ecf} icf={treated.icf} ton={TL.effOsm} ghost={{ ecf: truth.ecf, icf: truth.icf, ton: L.effOsm }} />
     : <Diagram ecf={showEcf} icf={icfShown} ton={ton}
-        icfDraggable={step === 3 && !icfChecked} onIcfSnap={setIcfGuess}
-        icfLabel={step === 3 && !icfChecked ? 'ICF: drag the edge' : 'ICF'}
-        tonDraggable={step === 2 && !tonChecked} onTonSnap={setTonGuess} />;
+        predict={step === 2 && !tonChecked && tonGuess != null ? 'ton' : step === 3 && !icfChecked && icfGuess != null ? 'icf' : null}
+        wrongTon={step === 2 && tonChecked && tonGuess != null && tonGuess !== truthTonDir ? TON_SNAPS[tonGuess] : null}
+        wrongIcf={step === 3 && icfChecked && icfGuess != null && icfGuess !== truthIcfDir ? ICF_SNAPS[icfGuess] : null}
+        arrow={step === 3 ? (icfChecked ? truthIcfDir : icfGuess ?? null) : null} />;
 
   // Only the first answer to each question is scored; Redo and Back never change it.
   const record = (r: Result) => setResult(prev => {
@@ -183,6 +189,8 @@ export default function BedsideFlow() {
     (Object.keys(r) as (keyof Result)[]).forEach(k => { if (next[k] === undefined) (next as any)[k] = r[k]; });
     return next;
   });
+  const pickTon = (v: Snap) => { setTonGuess(v); setFlash(f => f + 1); };
+  const pickIcf = (v: Snap) => { setIcfGuess(v); setFlash(f => f + 1); };
   const go = (n: number) => { setStep(n); setMaxStep(m => Math.max(m, n)); };
   const redo = (n: number) => {
     if (n === 1) setVol(undefined);
@@ -305,34 +313,14 @@ export default function BedsideFlow() {
                 <div><span>Serum Na⁺</span><b>{labNa}</b></div>
                 <div><span>Glucose</span><b>{f0(L.glucose)} mg/dL</b></div>
               </div>
-              <p className="lead">Na⁺ and glucose set the tonicity. Where does this patient's line go? Drag the blue line, or pick.</p>
-              <Choice label="Tonicity line" value={tonGuess} disabled={tonChecked}
-                options={[{ v: 1 as Snap, text: 'Above normal' }, { v: 0 as Snap, text: 'At normal' }, { v: -1 as Snap, text: 'Below normal' }]}
-                onPick={setTonGuess} />
-              {!tonChecked && <button className="primary" disabled={tonGuess == null}
-                onClick={() => { setTonChecked(true); record({ osm: tonGuess === truthTonDir }); }}>Check</button>}
-              {tonChecked && <>
-                <div className="formula mono">tonicity ≈ 2 × Na⁺ + glucose/18 = {f0(2 * labNa)} + {f0(gluC)} = <b>{f0(2 * labNa + gluC)}</b> (normal 285)</div>
-                <Verdict ok={tonGuess === truthTonDir}>{L.glucose > 300
-                  ? <>Na⁺ is low, but glucose pushes tonicity <b>above</b> normal. Sodium alone would have fooled you.</>
-                  : <>Na⁺ {labNa} puts tonicity {truthTonDir > 0 ? 'above' : truthTonDir < 0 ? 'below' : 'at'} normal. The line now sits where this patient's water is.</>}</Verdict>
-                <button className="primary" onClick={() => go(3)}>Predict the cells</button>
-              </>}
+              <p className="lead">Na⁺ and glucose set the tonicity. Predict under the diagram; your answer is drawn on it.</p>
             </div>
           )}
 
           {step === 3 && (
             <div className="stepbox">
               <h3>4 · What did the cells do?</h3>
-              <p className="lead">Drag the left edge of the ICF block, or pick below. Water follows tonicity.</p>
-              <Choice label="ICF volume" value={icfGuess} disabled={icfChecked}
-                options={[{ v: -1 as Snap, text: 'Shrank' }, { v: 0 as Snap, text: 'Unchanged' }, { v: 1 as Snap, text: 'Swelled' }]}
-                onPick={setIcfGuess} />
-              {!icfChecked && <button className="primary" disabled={icfGuess == null} onClick={() => { setIcfChecked(true); record({ icf: icfGuess === truthIcfDir }); }}>Check</button>}
-              {icfChecked && <>
-                <Verdict ok={icfGuess === truthIcfDir}>{c.icfNote} ICF {f1(truth.icf)} L (normal 28).</Verdict>
-                <button className="primary" onClick={() => go(4)}>Ask the kidney</button>
-              </>}
+              <p className="lead">Water follows tonicity. Predict under the diagram; your answer is drawn on it.</p>
             </div>
           )}
 
@@ -430,6 +418,7 @@ export default function BedsideFlow() {
         </section>
 
         <section className="figure" aria-label="Darrow–Yannett diagram">
+          {flash > 0 && <div key={flash} className="flash" aria-hidden="true" />}
           {diag}
           <div className="legend">
             <span><i className="sw icf" />ICF (cells)</span>
@@ -437,6 +426,45 @@ export default function BedsideFlow() {
             <span><i className="sw normal" />normal</span>
             {treated && <span><i className="sw ghost" />before treatment</span>}
           </div>
+
+          {step === 2 && (
+            <div className="predict">
+              <p className="q">Na⁺ {labNa}, glucose {f0(L.glucose)}: where does the tonicity line go?</p>
+              <Choice label="Tonicity line" value={tonGuess} disabled={tonChecked}
+                options={[{ v: 1 as Snap, text: 'Above normal' }, { v: 0 as Snap, text: 'At normal' }, { v: -1 as Snap, text: 'Below normal' }]}
+                onPick={pickTon} />
+              {!tonChecked && <>
+                <p className="hint">{tonGuess == null ? 'Pick one. Your prediction is drawn on the diagram.' : 'Your prediction is drawn dashed on the diagram.'}</p>
+                <button className="primary" disabled={tonGuess == null}
+                  onClick={() => { setTonChecked(true); record({ osm: tonGuess === truthTonDir }); }}>Check</button>
+              </>}
+              {tonChecked && <>
+                <div className="formula mono">tonicity ≈ 2 × Na⁺ + glucose/18 = {f0(2 * labNa)} + {f0(gluC)} = <b>{f0(2 * labNa + gluC)}</b> (normal 285)</div>
+                <Verdict ok={tonGuess === truthTonDir}>{L.glucose > 300
+                  ? <>Na⁺ is low, but glucose pushes tonicity <b>above</b> normal. Sodium alone would have fooled you.</>
+                  : <>Na⁺ {labNa} puts tonicity {truthTonDir > 0 ? 'above' : truthTonDir < 0 ? 'below' : 'at'} normal. The line now sits where this patient's water is.</>}</Verdict>
+                <button className="primary" onClick={() => go(3)}>Predict the cells</button>
+              </>}
+            </div>
+          )}
+
+          {step === 3 && (
+            <div className="predict">
+              <p className="q">Tonicity is {f0(L.effOsm)}. What did the cells do?</p>
+              <Choice label="Cells" value={icfGuess} disabled={icfChecked}
+                options={[{ v: -1 as Snap, text: 'Water out · cells shrink' }, { v: 0 as Snap, text: 'No shift' }, { v: 1 as Snap, text: 'Water in · cells swell' }]}
+                onPick={pickIcf} />
+              {!icfChecked && <>
+                <p className="hint">{icfGuess == null ? 'Pick one. Your prediction is drawn on the diagram.' : 'Your prediction is drawn dashed on the diagram.'}</p>
+                <button className="primary" disabled={icfGuess == null}
+                  onClick={() => { setIcfChecked(true); record({ icf: icfGuess === truthIcfDir }); }}>Check</button>
+              </>}
+              {icfChecked && <>
+                <Verdict ok={icfGuess === truthIcfDir}>{c.icfNote} ICF {f1(truth.icf)} L (normal 28).</Verdict>
+                <button className="primary" onClick={() => go(4)}>Ask the kidney</button>
+              </>}
+            </div>
+          )}
         </section>
       </div>
 
