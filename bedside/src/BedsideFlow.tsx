@@ -121,6 +121,7 @@ const NEED_TEXT: Record<'ecf' | 'cells', Record<Need, string>> = {
 export default function BedsideFlow() {
   const [ci, setCi] = useState(0);
   const [step, setStep] = useState(0);
+  const [maxStep, setMaxStep] = useState(0);
   const [vol, setVol] = useState<Vol>();
   const [na, setNa] = useState(140);
   const [naTouched, setNaTouched] = useState(false);
@@ -148,7 +149,7 @@ export default function BedsideFlow() {
   const TL = treated ? labs(treated) : null;
 
   const reset = (i: number) => {
-    setCi(i); setStep(0); setVol(undefined); setNa(140); setNaTouched(false); setIcfGuess(0); setIcfChecked(false);
+    setCi(i); setStep(0); setMaxStep(0); setVol(undefined); setNa(140); setNaTouched(false); setIcfGuess(0); setIcfChecked(false);
     setWater(undefined); setSalt(undefined); setCause(undefined); setKidneyChecked(false);
     setNeedEcf(undefined); setNeedCells(undefined); setNeedChecked(false); setFluid(undefined); setResult({});
   };
@@ -160,14 +161,28 @@ export default function BedsideFlow() {
   const showEcf = step >= 1 && vol != null ? truth.ecf : null;
   const ton = step >= 2 ? 2 * na + gluC : null;
   const icfShown = step < 3 ? BASE.icf : icfChecked || step > 3 ? truth.icf : ICF_SNAPS[icfGuess];
-  const diag = treated && TL
+  const diag = step === 5 && treated && TL
     ? <Diagram ecf={treated.ecf} icf={treated.icf} ton={TL.effOsm} ghost={{ ecf: truth.ecf, icf: truth.icf, ton: L.effOsm }} />
     : <Diagram ecf={showEcf} icf={icfShown} ton={ton}
         icfDraggable={step === 3 && !icfChecked} onIcfSnap={setIcfGuess}
         icfLabel={step === 3 && !icfChecked ? 'ICF: drag the edge' : 'ICF'} />;
 
-  const record = (r: Result) => setResult(prev => ({ ...prev, ...r }));
-  const finish = () => { setHistory(h => ({ ...h, [c.id]: result })); setStep(6); };
+  // Only the first answer to each question is scored; Redo and Back never change it.
+  const record = (r: Result) => setResult(prev => {
+    const next: Result = { ...prev };
+    (Object.keys(r) as (keyof Result)[]).forEach(k => { if (next[k] === undefined) (next as any)[k] = r[k]; });
+    return next;
+  });
+  const go = (n: number) => { setStep(n); setMaxStep(m => Math.max(m, n)); };
+  const redo = (n: number) => {
+    if (n === 1) setVol(undefined);
+    if (n === 2) { setNa(140); setNaTouched(false); }
+    if (n === 3) { setIcfGuess(0); setIcfChecked(false); }
+    if (n === 4) { setWater(undefined); setSalt(undefined); setCause(undefined); setKidneyChecked(false); }
+    if (n === 5) { setNeedEcf(undefined); setNeedCells(undefined); setNeedChecked(false); setFluid(undefined); }
+  };
+  const answered = [true, vol != null, naMatched, icfChecked, kidneyChecked, needChecked][step] ?? false;
+  const finish = () => { setHistory(h => ({ ...h, [c.id]: result })); go(6); };
 
   const scoreOf = (r: Result) => {
     const keys: (keyof Result)[] = ['vol', 'icf', 'water', 'salt', 'cause', 'ecfNeed', 'cellNeed'];
@@ -192,7 +207,11 @@ export default function BedsideFlow() {
 
       <ol className="progress" aria-label="Steps">
         {STEPS.map((s, i) => (
-          <li key={s} className={i === step ? 'now' : i < step ? 'done' : ''}><span>{i + 1}</span>{s}</li>
+          <li key={s} className={i === step ? 'now' : i <= maxStep ? 'done' : ''}>
+            {i <= maxStep
+              ? <button onClick={() => setStep(i)} aria-current={i === step ? 'step' : undefined}><span>{i + 1}</span>{s}</button>
+              : <div><span>{i + 1}</span>{s}</div>}
+          </li>
         ))}
       </ol>
 
@@ -204,6 +223,42 @@ export default function BedsideFlow() {
             <p>{c.story}</p>
           </div>
 
+          <dl className="chart" aria-label="Patient chart">
+            <div><dt>Vitals</dt><dd><span>{c.danger.circulation}</span><span>{c.danger.brain}</span></dd></div>
+            {maxStep >= 1 && <div><dt>Exam</dt><dd>
+              {c.exam.map(x => <span key={x}>{x}</span>)}
+              {vol != null && <span className="you">You: {vol} · ECF {f1(truth.ecf)} L</span>}
+            </dd></div>}
+            {maxStep >= 2 && <div><dt>Labs</dt><dd>
+              <span className="v">Na⁺ {labNa}</span>
+              <span className="v">Glucose {f0(L.glucose)}</span>
+              {(naMatched || maxStep > 2) && <span className="v">Tonicity {f0(L.effOsm)}</span>}
+              <span className="v">Hct {f0(L.hct)}%</span>
+            </dd></div>}
+            {(icfChecked || maxStep > 3) && maxStep >= 3 && <div><dt>Cells</dt><dd>
+              <span className="v">ICF {f1(truth.icf)} L</span>
+              <span>{truthIcfDir > 0 ? 'swollen' : truthIcfDir < 0 ? 'shrunken' : 'unchanged'}</span>
+            </dd></div>}
+            {maxStep >= 4 && <div><dt>Urine</dt><dd>
+              <span className="v">U<sub>osm</sub> {c.urine.osm}</span>
+              <span className="v">U<sub>Na</sub> {c.urine.na}</span>
+              {c.urine.extra && <span>{c.urine.extra}</span>}
+              {kidneyChecked && cause != null && <span className="you">You: {c.causes[cause].text}</span>}
+            </dd></div>}
+            {fluid && TL && <div><dt>Rx</dt><dd>
+              <span className="you">{FLUIDS[fluid].name}</span>
+              <span className="v">Na⁺ {labNa} → {f0(TL.na)}</span>
+            </dd></div>}
+          </dl>
+
+          <div className="stepnav">
+            {step > 0 && <button className="linkbtn" onClick={() => setStep(step - 1)}>← Back</button>}
+            {step >= 1 && step <= 5 && answered && <button className="linkbtn" onClick={() => redo(step)}>Redo this step</button>}
+            <span className="spacer" />
+            {maxStep > 0 && <button className="linkbtn" onClick={() => reset(ci)}>Restart case</button>}
+          </div>
+          {step >= 1 && step <= 5 && answered && maxStep > step && <p className="hint">Reviewing an earlier step. Only your first answer is scored.</p>}
+
           {step === 0 && (
             <div className="stepbox">
               <h3>1 · Is anyone in danger?</h3>
@@ -213,7 +268,7 @@ export default function BedsideFlow() {
                 <div><span className="k">Circulation</span><span>{c.danger.circulation}</span></div>
               </div>
               <p className="hint">The brain tells you about cell volume (tonicity). The circulation tells you about the ECF.</p>
-              <button className="primary" onClick={() => setStep(1)}>Examine the patient</button>
+              <button className="primary" onClick={() => go(1)}>Examine the patient</button>
             </div>
           )}
 
@@ -228,7 +283,7 @@ export default function BedsideFlow() {
               {vol != null && <>
                 <Verdict ok={volOk}>{c.volumeNote}</Verdict>
                 <p className="hint">The ECF block now shows this patient's volume: {f1(truth.ecf)} L (normal 14).</p>
-                <button className="primary" onClick={() => setStep(2)}>Check the sodium</button>
+                <button className="primary" onClick={() => go(2)}>Check the sodium</button>
               </>}
             </div>
           )}
@@ -242,7 +297,7 @@ export default function BedsideFlow() {
               </div>
               <label className="slider" htmlFor="na-slider">
                 <span>Slide Na⁺ to the lab value: <b className="mono">{na}</b> mmol/L</span>
-                <input id="na-slider" type="range" min={110} max={170} value={na} onChange={e => { setNa(Number(e.target.value)); setNaTouched(true); }} />
+                <input id="na-slider" type="range" min={110} max={170} value={na} disabled={naMatched && maxStep > 2} onChange={e => { setNa(Number(e.target.value)); setNaTouched(true); }} />
                 <span className="scale"><span>110</span><span>140</span><span>170</span></span>
               </label>
               <div className="formula mono">tonicity ≈ 2 × Na⁺ + glucose/18 = {f0(2 * na)} + {f0(gluC)} = <b>{f0(2 * na + gluC)}</b></div>
@@ -250,7 +305,7 @@ export default function BedsideFlow() {
                 {L.glucose > 300
                   ? <Verdict ok={true}>Look at the line: Na⁺ is low, but glucose pushes tonicity <b>above</b> normal. Sodium alone would have fooled you.</Verdict>
                   : <Verdict ok={true}>Tonicity is {L.effOsm > NORMAL_TON + 3 ? 'above' : L.effOsm < NORMAL_TON - 3 ? 'below' : 'at'} normal. The line now sits where this patient's water is.</Verdict>}
-                <button className="primary" onClick={() => setStep(3)}>Predict the cells</button>
+                <button className="primary" onClick={() => go(3)}>Predict the cells</button>
               </>}
             </div>
           )}
@@ -265,7 +320,7 @@ export default function BedsideFlow() {
               {!icfChecked && <button className="primary" onClick={() => { setIcfChecked(true); record({ icf: icfGuess === truthIcfDir }); }}>Check</button>}
               {icfChecked && <>
                 <Verdict ok={icfGuess === truthIcfDir}>{c.icfNote} ICF {f1(truth.icf)} L (normal 28).</Verdict>
-                <button className="primary" onClick={() => setStep(4)}>Ask the kidney</button>
+                <button className="primary" onClick={() => go(4)}>Ask the kidney</button>
               </>}
             </div>
           )}
@@ -296,7 +351,7 @@ export default function BedsideFlow() {
               {kidneyChecked && <>
                 <Verdict ok={water === c.water && salt === c.salt ? true : water === c.water || salt === c.salt ? 'ok' : false}>{c.kidneyNote}</Verdict>
                 <Verdict ok={!!c.causes[cause!].correct}>{c.causeNote}</Verdict>
-                <button className="primary" onClick={() => setStep(5)}>Treat</button>
+                <button className="primary" onClick={() => go(5)}>Treat</button>
               </>}
             </div>
           )}

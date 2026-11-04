@@ -33,6 +33,9 @@ h1 { margin: 2px 0 0; font-family: var(--font-head); font-weight: 600; font-size
 .progress { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 6px; }
 .progress li { display: flex; gap: 8px; align-items: center; padding: 8px 10px; border-radius: 8px; background: var(--soft); color: var(--muted); font-size: 14px; font-weight: 600; min-width: 0; }
 .progress li span { font-family: var(--font-num); font-size: 12px; width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; background: var(--panel); flex: 0 0 22px; }
+.progress li > button, .progress li > div { all: unset; display: flex; gap: 8px; align-items: center; width: 100%; min-width: 0; }
+.progress li > button { cursor: pointer; }
+.progress li > button:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; border-radius: 4px; }
 .progress li.now { background: var(--accent); color: var(--accent-ink); }
 .progress li.done { color: var(--ink); }
 .progress li.done span { background: var(--ecf); color: #10331b; }
@@ -41,7 +44,16 @@ h1 { margin: 2px 0 0; font-family: var(--font-head); font-weight: 600; font-size
 .figure { position: sticky; top: calc(env(safe-area-inset-top, 0px) + 12px); }
 .story h2 { margin: 2px 0 4px; font-family: var(--font-head); font-weight: 600; font-size: 1.35rem; }
 .story p { margin: 0; color: var(--ink); }
-.stepbox { margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--line); display: flex; flex-direction: column; gap: 12px; }
+.chart { margin: 14px 0 0; padding: 10px 12px; background: var(--soft); border-radius: 10px; display: flex; flex-direction: column; gap: 6px; font-size: 14px; }
+.chart > div { display: grid; grid-template-columns: 56px minmax(0, 1fr); gap: 8px; align-items: baseline; }
+.chart dt { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.chart dd { margin: 0; display: flex; flex-wrap: wrap; gap: 4px 12px; min-width: 0; }
+.chart .v { font-family: var(--font-num); font-variant-numeric: tabular-nums; font-weight: 600; }
+.chart .you { color: var(--accent); font-weight: 600; }
+.stepnav { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 12px; }
+.stepnav .spacer { flex: 1 1 auto; }
+.linkbtn { min-height: 40px; padding: 6px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); color: var(--ink); font-size: 14px; font-weight: 600; }
+.stepbox { margin-top: 12px; padding-top: 16px; border-top: 1px solid var(--line); display: flex; flex-direction: column; gap: 12px; }
 .stepbox h3 { margin: 0; font-size: 1.1rem; }
 .lead, .hint { margin: 0; color: var(--muted); }
 .hint { font-size: 14px; }
