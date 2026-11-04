@@ -37,6 +37,7 @@ h1 { margin: 2px 0 0; font-family: var(--font-head); font-weight: 600; font-size
 .progress li > button { cursor: pointer; }
 .progress li > button:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; border-radius: 4px; }
 .progress li.now { background: var(--accent); color: var(--accent-ink); }
+.progress li.now span { color: var(--accent); }
 .progress li.done { color: var(--ink); }
 .progress li.done span { background: var(--ecf); color: #10331b; }
 .layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr); gap: 18px; align-items: start; }
@@ -80,7 +81,12 @@ button:focus-visible, select:focus-visible, input:focus-visible, a:focus-visible
 .labs div { display: flex; flex-direction: column; padding: 8px 12px; background: var(--soft); border-radius: 8px; min-width: 96px; }
 .labs span { font-size: 13px; color: var(--muted); }
 .labs b { font-family: var(--font-num); font-variant-numeric: tabular-nums; font-size: 1.15rem; }
-.slider { display: flex; flex-direction: column; gap: 6px; }
+.slider { display: flex; flex-direction: column; gap: 6px; padding: 12px; border: 2px solid var(--line); border-radius: 10px; }
+.slider.needs { border-color: var(--accent); }
+.slider.matched { border-color: var(--good); }
+.slider .status { font-size: 15px; font-weight: 600; }
+.slider.needs .status { color: var(--accent); }
+.slider.matched .status { color: var(--good); }
 .slider input { width: 100%; accent-color: var(--accent); min-height: 32px; }
 .slider .scale { display: flex; justify-content: space-between; font-family: var(--font-num); font-size: 12px; color: var(--muted); }
 .formula { padding: 8px 12px; background: var(--soft); border-radius: 8px; font-size: 14px; overflow-x: auto; }

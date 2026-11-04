@@ -124,7 +124,6 @@ export default function BedsideFlow() {
   const [maxStep, setMaxStep] = useState(0);
   const [vol, setVol] = useState<Vol>();
   const [na, setNa] = useState(140);
-  const [naTouched, setNaTouched] = useState(false);
   const [icfGuess, setIcfGuess] = useState<Snap>(0);
   const [icfChecked, setIcfChecked] = useState(false);
   const [water, setWater] = useState<'holding' | 'dumping'>();
@@ -149,13 +148,13 @@ export default function BedsideFlow() {
   const TL = treated ? labs(treated) : null;
 
   const reset = (i: number) => {
-    setCi(i); setStep(0); setMaxStep(0); setVol(undefined); setNa(140); setNaTouched(false); setIcfGuess(0); setIcfChecked(false);
+    setCi(i); setStep(0); setMaxStep(0); setVol(undefined); setNa(140); setIcfGuess(0); setIcfChecked(false);
     setWater(undefined); setSalt(undefined); setCause(undefined); setKidneyChecked(false);
     setNeedEcf(undefined); setNeedCells(undefined); setNeedChecked(false); setFluid(undefined); setResult({});
   };
 
   const volOk = vol != null && (vol === c.volume || (c.volumeAlso ?? []).includes(vol));
-  const naMatched = naTouched && Math.abs(na - labNa) <= 1;
+  const naMatched = Math.abs(na - labNa) <= 1;
 
   // What the diagram shows at each step
   const showEcf = step >= 1 && vol != null ? truth.ecf : null;
@@ -176,7 +175,7 @@ export default function BedsideFlow() {
   const go = (n: number) => { setStep(n); setMaxStep(m => Math.max(m, n)); };
   const redo = (n: number) => {
     if (n === 1) setVol(undefined);
-    if (n === 2) { setNa(140); setNaTouched(false); }
+    if (n === 2) setNa(140);
     if (n === 3) { setIcfGuess(0); setIcfChecked(false); }
     if (n === 4) { setWater(undefined); setSalt(undefined); setCause(undefined); setKidneyChecked(false); }
     if (n === 5) { setNeedEcf(undefined); setNeedCells(undefined); setNeedChecked(false); setFluid(undefined); }
@@ -295,18 +294,21 @@ export default function BedsideFlow() {
                 <div><span>Serum Na⁺</span><b>{labNa}</b></div>
                 <div><span>Glucose</span><b>{f0(L.glucose)} mg/dL</b></div>
               </div>
-              <label className="slider" htmlFor="na-slider">
-                <span>Slide Na⁺ to the lab value: <b className="mono">{na}</b> mmol/L</span>
-                <input id="na-slider" type="range" min={110} max={170} value={na} disabled={naMatched && maxStep > 2} onChange={e => { setNa(Number(e.target.value)); setNaTouched(true); }} />
+              <label className={`slider ${naMatched ? 'matched' : 'needs'}`} htmlFor="na-slider">
+                <span>Move the slider to the patient's Na⁺. Normal is 140.</span>
+                <input id="na-slider" type="range" min={110} max={170} value={na} disabled={naMatched && maxStep > 2} onChange={e => setNa(Number(e.target.value))} />
                 <span className="scale"><span>110</span><span>140</span><span>170</span></span>
+                <span className="status" aria-live="polite">
+                  {naMatched
+                    ? <>✓ Slider at <b className="mono">{na}</b>: matches the lab.{labNa === 140 ? ' Normal sodium, so the line stays at normal.' : ''}</>
+                    : <>Slider at <b className="mono">{na}</b>. Move it {na < labNa ? 'right' : 'left'} to <b className="mono">{labNa}</b>.</>}
+                </span>
               </label>
               <div className="formula mono">tonicity ≈ 2 × Na⁺ + glucose/18 = {f0(2 * na)} + {f0(gluC)} = <b>{f0(2 * na + gluC)}</b></div>
-              {naMatched && <>
-                {L.glucose > 300
-                  ? <Verdict ok={true}>Look at the line: Na⁺ is low, but glucose pushes tonicity <b>above</b> normal. Sodium alone would have fooled you.</Verdict>
-                  : <Verdict ok={true}>Tonicity is {L.effOsm > NORMAL_TON + 3 ? 'above' : L.effOsm < NORMAL_TON - 3 ? 'below' : 'at'} normal. The line now sits where this patient's water is.</Verdict>}
-                <button className="primary" onClick={() => go(3)}>Predict the cells</button>
-              </>}
+              {naMatched && (L.glucose > 300
+                ? <Verdict ok={true}>Look at the line: Na⁺ is low, but glucose pushes tonicity <b>above</b> normal. Sodium alone would have fooled you.</Verdict>
+                : <Verdict ok={true}>Tonicity is {L.effOsm > NORMAL_TON + 3 ? 'above' : L.effOsm < NORMAL_TON - 3 ? 'below' : 'at'} normal. The line now sits where this patient's water is.</Verdict>)}
+              <button className="primary" disabled={!naMatched} onClick={() => go(3)}>Predict the cells</button>
             </div>
           )}
 
