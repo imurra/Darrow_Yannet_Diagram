@@ -1,0 +1,4 @@
+# GitHub Pages publishes only the Bedside activity.
+# archive/ (original 2024 dashboard and the Explorer) stays in the repo but is not published.
+exclude:
+  - archive
