@@ -3,7 +3,7 @@
 Interactive case activity that follows the bedside order:
 1. Danger (brain, circulation)
 2. Wet or dry (exam → ECF volume)
-3. Sodium sets the tonicity line (glucose included)
+3. Where does sodium put the tonicity line? (glucose included; scored)
 4. Predict the cells (drag the ICF edge)
 5. Read the kidney (urine osm and Na⁺ → cause)
 6. Treatment (where salt and water should go, then a fluid)

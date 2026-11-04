@@ -11,9 +11,10 @@ const CARD_URL = 'https://claude.ai/artifact/8mQxNPryeMczu5kGyH91Ti';
 const STEPS = ['Danger', 'Wet or dry', 'Sodium', 'Cells', 'Kidney', 'Treatment'];
 const NORMAL_TON = 285;
 const ICF_SNAPS: Record<-1 | 0 | 1, number> = { [-1]: 23, 0: 28, 1: 33 };
+const TON_SNAPS: Record<-1 | 0 | 1, number> = { [-1]: 250, 0: NORMAL_TON, 1: 320 };
 
 type Snap = -1 | 0 | 1;
-type Result = { vol?: boolean; icf?: boolean; water?: boolean; salt?: boolean; cause?: boolean; ecfNeed?: boolean; cellNeed?: boolean; fluid?: 'best' | 'ok' | 'harmful' };
+type Result = { vol?: boolean; osm?: boolean; icf?: boolean; water?: boolean; salt?: boolean; cause?: boolean; ecfNeed?: boolean; cellNeed?: boolean; fluid?: 'best' | 'ok' | 'harmful' };
 
 const f0 = (n: number) => Math.round(n).toString();
 const f1 = (n: number) => n.toFixed(1);
@@ -24,30 +25,32 @@ type DiagramProps = {
   ecf: number | null; icf: number; ton: number | null;
   ghost?: { ecf: number; icf: number; ton: number } | null;
   icfDraggable?: boolean; onIcfSnap?: (s: Snap) => void; icfLabel?: string;
+  tonDraggable?: boolean; onTonSnap?: (s: Snap) => void;
 };
 
-function Diagram({ ecf, icf, ton, ghost, icfDraggable, onIcfSnap, icfLabel }: DiagramProps) {
+function Diagram({ ecf, icf, ton, ghost, icfDraggable, onIcfSnap, icfLabel, tonDraggable, onTonSnap }: DiagramProps) {
   const W = 600, H = 320, PX = 9, left = 52, mem = left + 36 * PX, top = 24, bottom = 262, MAX = 380;
   const y = (o: number) => bottom - (Math.min(o, MAX) / MAX) * (bottom - top);
   const svgRef = useRef<SVGSVGElement>(null);
-  const dragging = useRef(false);
+  const dragging = useRef<null | 'icf' | 'ton'>(null);
   const tonY = y(ton ?? NORMAL_TON);
 
   const snapFromEvent = (e: React.PointerEvent) => {
-    const svg = svgRef.current; if (!svg || !onIcfSnap) return;
+    const svg = svgRef.current; if (!svg || !dragging.current) return;
     const pt = svg.createSVGPoint(); pt.x = e.clientX; pt.y = e.clientY;
     const p = pt.matrixTransform(svg.getScreenCTM()!.inverse());
-    const liters = (mem - p.x) / PX;
-    const best = ([-1, 0, 1] as Snap[]).reduce((a, b) => (Math.abs(ICF_SNAPS[b] - liters) < Math.abs(ICF_SNAPS[a] - liters) ? b : a));
-    onIcfSnap(best);
+    const nearest = (table: Record<Snap, number>, v: number) =>
+      ([-1, 0, 1] as Snap[]).reduce((a, b) => (Math.abs(table[b] - v) < Math.abs(table[a] - v) ? b : a));
+    if (dragging.current === 'icf' && onIcfSnap) onIcfSnap(nearest(ICF_SNAPS, (mem - p.x) / PX));
+    if (dragging.current === 'ton' && onTonSnap) onTonSnap(nearest(TON_SNAPS, ((bottom - p.y) / (bottom - top)) * MAX));
   };
 
   return (
     <svg ref={svgRef} viewBox={`0 0 ${W} ${H}`} className="dy-svg" role="img"
       aria-label={`ICF ${f1(icf)} liters${ecf != null ? `, ECF ${f1(ecf)} liters` : ''}${ton != null ? `, tonicity ${f0(ton)}` : ''}`}
       onPointerMove={e => { if (dragging.current) snapFromEvent(e); }}
-      onPointerUp={() => { dragging.current = false; }}
-      onPointerLeave={() => { dragging.current = false; }}>
+      onPointerUp={() => { dragging.current = null; }}
+      onPointerLeave={() => { dragging.current = null; }}>
       {[0, 100, 200, 300].map(t => (
         <g key={t}>
           <line x1={left} x2={W - 12} y1={y(t)} y2={y(t)} className="grid" />
@@ -81,8 +84,14 @@ function Diagram({ ecf, icf, ton, ghost, icfDraggable, onIcfSnap, icfLabel }: Di
 
       {icfDraggable && (
         <rect x={mem - icf * PX - 9} y={tonY + (bottom - tonY) / 2 - 26} width={18} height={52} rx={6} className="handle"
-          onPointerDown={e => { dragging.current = true; (e.target as Element).setPointerCapture?.(e.pointerId); snapFromEvent(e); }} />
+          onPointerDown={e => { dragging.current = 'icf'; (e.target as Element).setPointerCapture?.(e.pointerId); snapFromEvent(e); }} />
       )}
+      {tonDraggable && <>
+        <line x1={left} x2={W - 12} y1={tonY} y2={tonY} className="tonline" />
+        <rect x={mem + 70} y={tonY - 9} width={56} height={18} rx={6} className="handle ton"
+          onPointerDown={e => { dragging.current = 'ton'; (e.target as Element).setPointerCapture?.(e.pointerId); snapFromEvent(e); }} />
+        <text x={mem + 98} y={tonY - 14} textAnchor="middle" className="tick">drag</text>
+      </>}
 
       <line x1={left} x2={W - 12} y1={bottom} y2={bottom} className="axis" />
       {[30, 20, 10].map(v => <text key={`i${v}`} x={mem - v * PX} y={bottom + 16} textAnchor="middle" className="tick">{v}</text>)}
@@ -123,7 +132,8 @@ export default function BedsideFlow() {
   const [step, setStep] = useState(0);
   const [maxStep, setMaxStep] = useState(0);
   const [vol, setVol] = useState<Vol>();
-  const [na, setNa] = useState(140);
+  const [tonGuess, setTonGuess] = useState<Snap>();
+  const [tonChecked, setTonChecked] = useState(false);
   const [icfGuess, setIcfGuess] = useState<Snap>(0);
   const [icfChecked, setIcfChecked] = useState(false);
   const [water, setWater] = useState<'holding' | 'dumping'>();
@@ -148,23 +158,24 @@ export default function BedsideFlow() {
   const TL = treated ? labs(treated) : null;
 
   const reset = (i: number) => {
-    setCi(i); setStep(0); setMaxStep(0); setVol(undefined); setNa(140); setIcfGuess(0); setIcfChecked(false);
+    setCi(i); setStep(0); setMaxStep(0); setVol(undefined); setTonGuess(undefined); setTonChecked(false); setIcfGuess(0); setIcfChecked(false);
     setWater(undefined); setSalt(undefined); setCause(undefined); setKidneyChecked(false);
     setNeedEcf(undefined); setNeedCells(undefined); setNeedChecked(false); setFluid(undefined); setResult({});
   };
 
   const volOk = vol != null && (vol === c.volume || (c.volumeAlso ?? []).includes(vol));
-  const naMatched = Math.abs(na - labNa) <= 1;
+  const truthTonDir = dirOf(L.effOsm - NORMAL_TON, 5);
 
   // What the diagram shows at each step
   const showEcf = step >= 1 && vol != null ? truth.ecf : null;
-  const ton = step >= 2 ? 2 * na + gluC : null;
+  const ton = step < 2 ? null : step > 2 || tonChecked ? L.effOsm : tonGuess != null ? TON_SNAPS[tonGuess] : NORMAL_TON;
   const icfShown = step < 3 ? BASE.icf : icfChecked || step > 3 ? truth.icf : ICF_SNAPS[icfGuess];
   const diag = step === 5 && treated && TL
     ? <Diagram ecf={treated.ecf} icf={treated.icf} ton={TL.effOsm} ghost={{ ecf: truth.ecf, icf: truth.icf, ton: L.effOsm }} />
     : <Diagram ecf={showEcf} icf={icfShown} ton={ton}
         icfDraggable={step === 3 && !icfChecked} onIcfSnap={setIcfGuess}
-        icfLabel={step === 3 && !icfChecked ? 'ICF: drag the edge' : 'ICF'} />;
+        icfLabel={step === 3 && !icfChecked ? 'ICF: drag the edge' : 'ICF'}
+        tonDraggable={step === 2 && !tonChecked} onTonSnap={setTonGuess} />;
 
   // Only the first answer to each question is scored; Redo and Back never change it.
   const record = (r: Result) => setResult(prev => {
@@ -175,18 +186,18 @@ export default function BedsideFlow() {
   const go = (n: number) => { setStep(n); setMaxStep(m => Math.max(m, n)); };
   const redo = (n: number) => {
     if (n === 1) setVol(undefined);
-    if (n === 2) setNa(140);
+    if (n === 2) { setTonGuess(undefined); setTonChecked(false); }
     if (n === 3) { setIcfGuess(0); setIcfChecked(false); }
     if (n === 4) { setWater(undefined); setSalt(undefined); setCause(undefined); setKidneyChecked(false); }
     if (n === 5) { setNeedEcf(undefined); setNeedCells(undefined); setNeedChecked(false); setFluid(undefined); }
   };
-  const answered = [true, vol != null, naMatched, icfChecked, kidneyChecked, needChecked][step] ?? false;
+  const answered = [true, vol != null, tonChecked, icfChecked, kidneyChecked, needChecked][step] ?? false;
   const finish = () => { setHistory(h => ({ ...h, [c.id]: result })); go(6); };
 
   const scoreOf = (r: Result) => {
-    const keys: (keyof Result)[] = ['vol', 'icf', 'water', 'salt', 'cause', 'ecfNeed', 'cellNeed'];
+    const keys: (keyof Result)[] = ['vol', 'osm', 'icf', 'water', 'salt', 'cause', 'ecfNeed', 'cellNeed'];
     const pts = keys.filter(k => r[k] === true).length + (r.fluid === 'best' ? 1 : r.fluid === 'ok' ? 0.5 : 0);
-    return { pts, of: 8 };
+    return { pts, of: 9 };
   };
 
   return (
@@ -231,7 +242,7 @@ export default function BedsideFlow() {
             {maxStep >= 2 && <div><dt>Labs</dt><dd>
               <span className="v">Na⁺ {labNa}</span>
               <span className="v">Glucose {f0(L.glucose)}</span>
-              {(naMatched || maxStep > 2) && <span className="v">Tonicity {f0(L.effOsm)}</span>}
+              {(tonChecked || maxStep > 2) && <span className="v">Tonicity {f0(L.effOsm)}</span>}
               <span className="v">Hct {f0(L.hct)}%</span>
             </dd></div>}
             {(icfChecked || maxStep > 3) && maxStep >= 3 && <div><dt>Cells</dt><dd>
@@ -289,26 +300,24 @@ export default function BedsideFlow() {
 
           {step === 2 && (
             <div className="stepbox">
-              <h3>3 · Let sodium set the line</h3>
+              <h3>3 · Where does sodium put the line?</h3>
               <div className="labs">
                 <div><span>Serum Na⁺</span><b>{labNa}</b></div>
                 <div><span>Glucose</span><b>{f0(L.glucose)} mg/dL</b></div>
               </div>
-              <label className={`slider ${naMatched ? 'matched' : 'needs'}`} htmlFor="na-slider">
-                <span>Move the slider to the patient's Na⁺. Normal is 140.</span>
-                <input id="na-slider" type="range" min={110} max={170} value={na} disabled={naMatched && maxStep > 2} onChange={e => setNa(Number(e.target.value))} />
-                <span className="scale"><span>110</span><span>140</span><span>170</span></span>
-                <span className="status" aria-live="polite">
-                  {naMatched
-                    ? <>✓ Slider at <b className="mono">{na}</b>: matches the lab.{labNa === 140 ? ' Normal sodium, so the line stays at normal.' : ''}</>
-                    : <>Slider at <b className="mono">{na}</b>. Move it {na < labNa ? 'right' : 'left'} to <b className="mono">{labNa}</b>.</>}
-                </span>
-              </label>
-              <div className="formula mono">tonicity ≈ 2 × Na⁺ + glucose/18 = {f0(2 * na)} + {f0(gluC)} = <b>{f0(2 * na + gluC)}</b></div>
-              {naMatched && (L.glucose > 300
-                ? <Verdict ok={true}>Look at the line: Na⁺ is low, but glucose pushes tonicity <b>above</b> normal. Sodium alone would have fooled you.</Verdict>
-                : <Verdict ok={true}>Tonicity is {L.effOsm > NORMAL_TON + 3 ? 'above' : L.effOsm < NORMAL_TON - 3 ? 'below' : 'at'} normal. The line now sits where this patient's water is.</Verdict>)}
-              <button className="primary" disabled={!naMatched} onClick={() => go(3)}>Predict the cells</button>
+              <p className="lead">Na⁺ and glucose set the tonicity. Where does this patient's line go? Drag the blue line, or pick.</p>
+              <Choice label="Tonicity line" value={tonGuess} disabled={tonChecked}
+                options={[{ v: 1 as Snap, text: 'Above normal' }, { v: 0 as Snap, text: 'At normal' }, { v: -1 as Snap, text: 'Below normal' }]}
+                onPick={setTonGuess} />
+              {!tonChecked && <button className="primary" disabled={tonGuess == null}
+                onClick={() => { setTonChecked(true); record({ osm: tonGuess === truthTonDir }); }}>Check</button>}
+              {tonChecked && <>
+                <div className="formula mono">tonicity ≈ 2 × Na⁺ + glucose/18 = {f0(2 * labNa)} + {f0(gluC)} = <b>{f0(2 * labNa + gluC)}</b> (normal 285)</div>
+                <Verdict ok={tonGuess === truthTonDir}>{L.glucose > 300
+                  ? <>Na⁺ is low, but glucose pushes tonicity <b>above</b> normal. Sodium alone would have fooled you.</>
+                  : <>Na⁺ {labNa} puts tonicity {truthTonDir > 0 ? 'above' : truthTonDir < 0 ? 'below' : 'at'} normal. The line now sits where this patient's water is.</>}</Verdict>
+                <button className="primary" onClick={() => go(3)}>Predict the cells</button>
+              </>}
             </div>
           )}
 
@@ -402,6 +411,7 @@ export default function BedsideFlow() {
                 <div className="scorebig mono">{s.pts} / {s.of}</div>
                 <ul className="tally">
                   <li className={result.vol ? 'y' : 'n'}>Wet or dry</li>
+                  <li className={result.osm ? 'y' : 'n'}>Tonicity line</li>
                   <li className={result.icf ? 'y' : 'n'}>Cells</li>
                   <li className={result.water ? 'y' : 'n'}>Kidney: water</li>
                   <li className={result.salt ? 'y' : 'n'}>Kidney: salt</li>

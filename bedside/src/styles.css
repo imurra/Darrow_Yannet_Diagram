@@ -116,6 +116,8 @@ button:focus-visible, select:focus-visible, input:focus-visible, a:focus-visible
 .dy-svg .lab { font-family: var(--font-body); font-weight: 700; font-size: 15px; }
 .dy-svg .icf-t { fill: var(--icf-ink); } .dy-svg .ecf-t { fill: var(--ecf-ink); }
 .dy-svg .handle { fill: var(--panel); stroke: var(--icf-ink); stroke-width: 2.5; cursor: ew-resize; }
+.dy-svg .handle.ton { stroke: var(--accent); cursor: ns-resize; }
+.dy-svg .tonline { stroke: var(--accent); stroke-width: 2.5; }
 .legend { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 8px; font-size: 13px; color: var(--muted); }
 .legend span { display: flex; gap: 6px; align-items: center; }
 .sw { width: 14px; height: 14px; display: inline-block; border-radius: 2px; }
