@@ -1,4 +1,4 @@
-// Darrow–Yannett physiology engine (no UI).
+// Darrow–Yannet physiology engine (no UI).
 // Effective osmoles (salt, glucose) stay in the ECF; ICF effective solute is fixed;
 // urea crosses membranes freely, so it raises measured osmolarity without moving water.
 

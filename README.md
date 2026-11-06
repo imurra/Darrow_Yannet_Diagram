@@ -1,11 +1,11 @@
-# Darrow–Yannett at the Bedside
+# Darrow–Yannet at the Bedside
 
 Interactive case activity for teaching fluid compartments, tonicity and water shifts in medical education.
 
 **Live page:** https://imurra.github.io/Darrow_Yannet_Diagram/ (opens the activity)
 
 ## The activity — `bedside/`
-Six steps in bedside order, on a live Darrow–Yannett diagram:
+Six steps in bedside order, on a live Darrow–Yannet diagram:
 1. Danger (brain, circulation)
 2. Wet or dry (exam → ECF volume)
 3. Where does sodium put the tonicity line? (glucose included; scored)
@@ -27,7 +27,7 @@ The site root redirects to `bedside/`. `_config.yml` keeps `archive/` off the pu
 
 ## Archive (not published)
 - `archive/explorer/` — the corrected fluid-type Explorer (gain or lose isotonic, hypotonic or hypertonic fluid; before/after water shift; three-question walkthrough)
-- `archive/Darrow Yannett fluid-balance-dashboard- cc commons.tsx` — the original 2024 dashboard; see `archive/README.md`
+- `archive/Darrow Yannet fluid-balance-dashboard- cc commons.tsx` — the original 2024 dashboard; see `archive/README.md`
 
 ## License
 Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License

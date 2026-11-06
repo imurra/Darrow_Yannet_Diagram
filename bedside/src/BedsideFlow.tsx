@@ -1,5 +1,5 @@
 /*
- * Darrow–Yannett at the Bedside
+ * Darrow–Yannet at the Bedside
  * Copyright (c) 2026 Ian Victor Joseph Murray · CC BY-NC-SA 4.0
  * http://creativecommons.org/licenses/by-nc-sa/4.0/
  */
@@ -326,7 +326,7 @@ export default function BedsideFlow() {
       <header className="top">
         <div>
           <div className="eyebrow">Body fluids at the bedside</div>
-          <h1>Darrow–Yannett at the Bedside</h1>
+          <h1>Darrow–Yannet at the Bedside</h1>
         </div>
         <label className="casepick">
           <span>Case</span>
@@ -541,14 +541,14 @@ export default function BedsideFlow() {
                 <p className="hint">{done} of {CASES.length} cases done.</p>
                 <div className="row">
                   {ci < CASES.length - 1 && <button className="primary" onClick={() => reset(ci + 1)}>Next case</button>}
-                  <a className="ghostbtn" href={CARD_URL}>Post-activity: Darrow–Yannett, read backward</a>
+                  <a className="ghostbtn" href={CARD_URL}>Post-activity: Darrow–Yannet, read backward</a>
                 </div>
               </div>
             );
           })()}
         </section>
 
-        <section className="figure" aria-label="Darrow–Yannett diagram">
+        <section className="figure" aria-label="Darrow–Yannet diagram">
           {flash > 0 && <div key={flash} className="flash" aria-hidden="true" />}
           {diag}
           <div className="legend">
