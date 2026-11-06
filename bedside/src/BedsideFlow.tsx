@@ -142,6 +142,18 @@ const SOURCES: { text: string; url: string }[] = [
   { text: 'Society for Endocrinology. Emergency management of adrenal crisis', url: 'https://endocrinology.org/adrenal-crisis' },
 ];
 
+// Plain-language background on each condition (MedlinePlus, US National Library of Medicine)
+const LEARN: Record<string, { text: string; url: string }> = {
+  diarrhea: { text: 'Dehydration', url: 'https://medlineplus.gov/ency/article/000982.htm' },
+  marathon: { text: 'Low blood sodium', url: 'https://medlineplus.gov/ency/article/000394.htm' },
+  siadh: { text: 'SIADH', url: 'https://medlineplus.gov/ency/article/000314.htm' },
+  hf: { text: 'Heart failure', url: 'https://medlineplus.gov/heartfailure.html' },
+  addison: { text: 'Acute adrenal crisis', url: 'https://medlineplus.gov/ency/article/000357.htm' },
+  dehydration: { text: 'Dehydration', url: 'https://medlineplus.gov/ency/article/000982.htm' },
+  di: { text: 'Nephrogenic diabetes insipidus', url: 'https://medlineplus.gov/ency/article/000511.htm' },
+  hhs: { text: 'Hyperglycemic hyperosmolar syndrome', url: 'https://medlineplus.gov/ency/article/000304.htm' },
+};
+
 const STATES: [string, string, string, string][] = [
   ['Na⁺ ↑ · ECF ↓', 'Hyperosmotic contraction', 'Sweating, poor water intake, diabetes insipidus', 'Cells shrink'],
   ['Na⁺ ↑ · ECF ↑', 'Hyperosmotic expansion', 'Hypertonic saline, salt ingestion, NaHCO₃', 'Cells shrink'],
@@ -194,7 +206,7 @@ function Reference({ onClose }: { onClose: () => void }) {
         <tr><td>0.9% saline</td><td>Na⁺ 154 (308 mOsm/L)</td><td>Stays in the ECF. If ADH is on and urine is more concentrated than 308, the salt is excreted and the water kept, so Na⁺ falls.</td></tr>
         <tr><td>Lactated Ringer's</td><td>Na⁺ 130 (273 mOsm/L)</td><td>Mostly ECF; slightly hypotonic.</td></tr>
         <tr><td>D5W</td><td>Free water once glucose is used</td><td>Spreads across all body water: about two-thirds into cells.</td></tr>
-        <tr><td>3% saline</td><td>Na⁺ 513 (1026 mOsm/L)</td><td>Raises tonicity and pulls water out of cells. Emergency bolus only.</td></tr>
+        <tr><td>3% saline</td><td>Na⁺ 513 (1026 mOsm/L)</td><td>Raises tonicity and pulls water out of cells. Emergency use by a specialist team only; not a routine treatment.</td></tr>
         <tr><td>Fluid restriction</td><td>Less free water in</td><td>Na⁺ rises slowly.</td></tr>
         <tr><td>Loop diuretic</td><td>Urine Na⁺ about 70</td><td>Removes salt and more water: hypotonic loss.</td></tr>
       </tbody></table>
@@ -202,7 +214,7 @@ function Reference({ onClose }: { onClose: () => void }) {
       <h3>Safety: sodium speed limits</h3>
       <ul>
         <li><b>Chronic hyponatremia</b> (over 48 h or unknown): raise Na⁺ no more than 8–10 mmol/L in 24 h, and no more than 8 if risk is high (Na⁺ ≤105, low K⁺, alcohol use, malnutrition, liver disease). Faster rises can cause osmotic demyelination days later.</li>
-        <li><b>Severe symptoms</b> (seizures, coma, confusion with vomiting): 3% saline bolus (European guideline 150 mL; Wilderness Medical Society 100 mL for exercise-associated hyponatremia), recheck Na⁺, and repeat until symptoms improve or Na⁺ has risen 5 mmol/L.</li>
+        <li><b>Emergency: severe symptoms</b> (confusion, vomiting, seizures, coma) mean the brain is swelling. Call for specialist help at once. An experienced team decides and monitors treatment, because raising sodium too slowly or too fast can both injure the brain (see <a href="https://medlineplus.gov/ency/article/000775.htm" target="_blank" rel="noopener">osmotic demyelination syndrome</a>).</li>
         <li><b>Watch for overshoot</b> when the cause of ADH release goes away: volume restored, cortisol replaced, thiazide or SSRI stopped. A water diuresis can raise Na⁺ fast; D5W or desmopressin can bring it back down.</li>
         <li><b>Chronic hypernatremia:</b> lower Na⁺ no faster than 0.5 mmol/L per hour (10–12 mmol/L in 24 h). Faster lowering risks cerebral edema. Treat shock first.</li>
         <li><b>HHS:</b> 0.9% saline first; a rising Na⁺ is expected as glucose falls. Aim for an osmolality fall of 3–8 mOsm/kg per hour.</li>
@@ -210,10 +222,11 @@ function Reference({ onClose }: { onClose: () => void }) {
       </ul>
 
       <h3>The cases</h3>
-      <table className="reftable"><thead><tr><th>Case</th><th>Cause</th><th>Best first treatment</th><th>Safety</th></tr></thead><tbody>
+      <table className="reftable"><thead><tr><th>Case</th><th>Cause</th><th>Best first treatment</th><th>Safety</th><th>Learn more</th></tr></thead><tbody>
         {CASES.map((k, i) => {
-          const best = (Object.keys(FLUIDS) as FluidId[]).filter(f => k.grades[f]?.[0] === 'best').map(f => FLUIDS[f].name).join(' or ');
-          return <tr key={k.id}><td>{i + 1}. {k.title}</td><td>{k.causes.find(x => x.correct)?.text}</td><td>{best}</td><td>{k.safety}</td></tr>;
+          const best = k.specialist ? 'Emergency: specialist management' : (Object.keys(FLUIDS) as FluidId[]).filter(f => k.grades[f]?.[0] === 'best').map(f => FLUIDS[f].name).join(' or ');
+          const more = LEARN[k.id];
+          return <tr key={k.id}><td>{i + 1}. {k.title}</td><td>{k.causes.find(x => x.correct)?.text}</td><td>{best}</td><td>{k.safety}</td><td>{more && <a href={more.url} target="_blank" rel="noopener">{more.text}</a>}</td></tr>;
         })}
       </tbody></table>
 
@@ -299,13 +312,13 @@ export default function BedsideFlow() {
   const resetBtn = (n: number) => (
     <button className="linkbtn" onClick={() => redo(n)} title="Clear your answer to this step and try again. Your first answer is still the one scored.">Reset this step</button>
   );
-  const answered = [true, vol != null, tonChecked, icfChecked, kidneyChecked, needChecked][step] ?? false;
+  const answered = [true, vol != null, tonChecked, icfChecked, kidneyChecked, c.specialist || needChecked][step] ?? false;
   const finish = () => { setHistory(h => ({ ...h, [c.id]: result })); go(6); };
 
   const scoreOf = (r: Result) => {
-    const keys: (keyof Result)[] = ['vol', 'osm', 'icf', 'water', 'salt', 'cause', 'ecfNeed', 'cellNeed'];
-    const pts = keys.filter(k => r[k] === true).length + (r.fluid === 'best' ? 1 : r.fluid === 'ok' ? 0.5 : 0);
-    return { pts, of: 9 };
+    const keys: (keyof Result)[] = c.specialist ? ['vol', 'osm', 'icf', 'water', 'salt', 'cause'] : ['vol', 'osm', 'icf', 'water', 'salt', 'cause', 'ecfNeed', 'cellNeed'];
+    const pts = keys.filter(k => r[k] === true).length + (c.specialist ? 0 : r.fluid === 'best' ? 1 : r.fluid === 'ok' ? 0.5 : 0);
+    return { pts, of: c.specialist ? 6 : 9 };
   };
 
   return (
@@ -455,7 +468,22 @@ export default function BedsideFlow() {
             </div>
           )}
 
-          {step === 5 && (
+          {step === 5 && c.specialist && (
+            <div className="stepbox">
+              <h3>6 · Treatment: specialist management</h3>
+              <div className="verdict bad"><b>Emergency.</b> {c.safety}</div>
+              <p className="q">Why it needs a specialist</p>
+              <ul className="findings">
+                <li><b>Left untreated:</b> brain swelling can progress to seizures, coma, brain herniation and death.</li>
+                <li><b>Corrected too fast:</b> in hyponatremia that has lasted more than 48 hours, a rapid rise in Na⁺ can cause osmotic demyelination, a permanent brain injury that appears days later.</li>
+                <li><b>Corrected too slowly:</b> the swelling continues.</li>
+              </ul>
+              <p className="hint">This case has no treatment choice. <a href="https://medlineplus.gov/ency/article/000394.htm" target="_blank" rel="noopener">Learn more: low blood sodium</a></p>
+              <button className="primary" onClick={finish}>Finish case</button>
+            </div>
+          )}
+
+          {step === 5 && !c.specialist && (
             <div className="stepbox">
               <h3>6 · Where do you want salt and water?</h3>
               <p className="q">The ECF needs…</p>
@@ -507,8 +535,8 @@ export default function BedsideFlow() {
                   <li className={result.water ? 'y' : 'n'}>Kidney: water</li>
                   <li className={result.salt ? 'y' : 'n'}>Kidney: salt</li>
                   <li className={result.cause ? 'y' : 'n'}>Cause</li>
-                  <li className={result.ecfNeed && result.cellNeed ? 'y' : 'n'}>Where salt and water go</li>
-                  <li className={result.fluid === 'best' ? 'y' : result.fluid === 'ok' ? 'm' : 'n'}>First treatment</li>
+                  {!c.specialist && <li className={result.ecfNeed && result.cellNeed ? 'y' : 'n'}>Where salt and water go</li>}
+                  {!c.specialist && <li className={result.fluid === 'best' ? 'y' : result.fluid === 'ok' ? 'm' : 'n'}>First treatment</li>}
                 </ul>
                 <p className="hint">{done} of {CASES.length} cases done.</p>
                 <div className="row">

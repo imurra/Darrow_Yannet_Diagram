@@ -35,6 +35,8 @@ export type Case = {
   adhUosm?: number;
   // Safety and monitoring advice shown with every treatment choice
   safety: string;
+  // Emergency: no treatment choice; the case ends with specialist referral
+  specialist?: boolean;
   grades: Partial<Record<FluidId, [Grade, string]>>;
 };
 
@@ -78,7 +80,8 @@ export const CASES: Case[] = [
     causeNote: 'Sweat lost some salt, but the large free-water gain with ADH on is what dropped Na⁺.',
     needEcf: 'none', needCells: 'out', needNote: 'Volume is about right. Brain cells are swollen, so water has to come out of them.',
     adhUosm: 450,
-    safety: 'Acute (under 48 h) symptomatic hyponatremia: give 3% saline as a bolus (Wilderness Medical Society: 100 mL, repeat every 10 min up to 3 times; European guideline: 150 mL). Recheck Na⁺ after each bolus. Aim for a 4–6 mmol/L rise, and no more than 10 mmol/L in 24 h. Avoid isotonic fluids unless the patient is in shock.',
+    specialist: true,
+    safety: 'Confusion and vomiting after overdrinking mean the brain is swelling. This is an emergency. An experienced team decides and monitors treatment, because raising sodium too slowly or too fast can both injure the brain. Your role: recognize it, call for help, and stop any further water. Give no IV fluids unless the team directs it.',
     grades: {
       hts: ['best', 'Symptomatic: a small hypertonic bolus raises tonicity and pulls water out of brain cells fast, with little volume. Recheck Na⁺ before repeating it.'],
       restrict: ['ok', 'Right direction, but too slow for a confused, vomiting patient.'],
