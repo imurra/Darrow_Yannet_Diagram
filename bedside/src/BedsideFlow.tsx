@@ -13,7 +13,15 @@ const NORMAL_TON = 285;
 const TON_SNAPS: Record<-1 | 0 | 1, number> = { [-1]: 250, 0: NORMAL_TON, 1: 320 };
 
 type Snap = -1 | 0 | 1;
-type Result = { vol?: boolean; osm?: boolean; icf?: boolean; water?: boolean; salt?: boolean; cause?: boolean; ecfNeed?: boolean; cellNeed?: boolean; fluid?: 'best' | 'ok' | 'harmful' };
+type Result = { vol?: boolean; osm?: boolean; icf?: boolean; water?: boolean; salt?: boolean; cause?: boolean; why?: boolean; chain?: boolean; ecfNeed?: boolean; cellNeed?: boolean; fluid?: 'best' | 'ok' | 'harmful' };
+
+// Fixed shuffle per case so the chain never starts in order.
+function shuffled(n: number, seed: number): number[] {
+  const a = Array.from({ length: n }, (_, i) => i);
+  let x = seed * 9301 + 49297;
+  for (let i = n - 1; i > 0; i--) { x = (x * 9301 + 49297) % 233280; const j = Math.floor((x / 233280) * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
+  return a.every((v, i) => v === i) ? a.reverse() : a;
+}
 
 const f0 = (n: number) => Math.round(n).toString();
 const f1 = (n: number) => n.toFixed(1);
@@ -267,6 +275,9 @@ export default function BedsideFlow() {
   const [flash, setFlash] = useState(0);
   const [history, setHistory] = useState<Record<string, Result>>({});
   const [showRef, setShowRef] = useState(false);
+  const [why, setWhy] = useState<Snap>();             // reason for the cell prediction: 1 ECF lower, -1 ECF higher, 0 equal
+  const [order, setOrder] = useState<number[]>([]);   // chain links in the order tapped
+  const [chainChecked, setChainChecked] = useState(false);
   const [shift, setShift] = useState<'before' | 'after'>('after');   // cells step: before or after water moves
   const timer = useRef<number>();
   const playShift = () => {
@@ -297,7 +308,7 @@ export default function BedsideFlow() {
   const reset = (i: number) => {
     setCi(i); setStep(0); setMaxStep(0); setVol(undefined); setTonGuess(undefined); setTonChecked(false); setIcfGuess(undefined); setIcfChecked(false);
     setWater(undefined); setSalt(undefined); setCause(undefined); setKidneyChecked(false);
-    setNeedEcf(undefined); setNeedCells(undefined); setNeedChecked(false); setFluid(undefined); setResult({}); showShift('after');
+    setNeedEcf(undefined); setNeedCells(undefined); setNeedChecked(false); setFluid(undefined); setResult({}); showShift('after'); setWhy(undefined); setOrder([]); setChainChecked(false);
   };
 
   const volOk = vol != null && (vol === c.volume || (c.volumeAlso ?? []).includes(vol));
@@ -356,7 +367,7 @@ export default function BedsideFlow() {
   const redo = (n: number) => {
     if (n === 1) setVol(undefined);
     if (n === 2) { setTonGuess(undefined); setTonChecked(false); }
-    if (n === 3) { setIcfGuess(undefined); setIcfChecked(false); showShift('after'); }
+    if (n === 3) { setIcfGuess(undefined); setWhy(undefined); setIcfChecked(false); showShift('after'); }
     if (n === 4) { setWater(undefined); setSalt(undefined); setCause(undefined); setKidneyChecked(false); }
     if (n === 5) { setNeedEcf(undefined); setNeedCells(undefined); setNeedChecked(false); setFluid(undefined); }
   };
@@ -367,9 +378,9 @@ export default function BedsideFlow() {
   const finish = () => { setHistory(h => ({ ...h, [c.id]: result })); go(6); };
 
   const scoreOf = (r: Result) => {
-    const keys: (keyof Result)[] = c.specialist ? ['vol', 'osm', 'icf', 'water', 'salt', 'cause'] : ['vol', 'osm', 'icf', 'water', 'salt', 'cause', 'ecfNeed', 'cellNeed'];
+    const keys: (keyof Result)[] = c.specialist ? ['vol', 'osm', 'icf', 'why', 'water', 'salt', 'cause', 'chain'] : ['vol', 'osm', 'icf', 'why', 'water', 'salt', 'cause', 'chain', 'ecfNeed', 'cellNeed'];
     const pts = keys.filter(k => r[k] === true).length + (c.specialist ? 0 : r.fluid === 'best' ? 1 : r.fluid === 'ok' ? 0.5 : 0);
-    return { pts, of: c.specialist ? 6 : 9 };
+    return { pts, of: c.specialist ? 8 : 11 };
   };
 
   return (
@@ -592,14 +603,46 @@ export default function BedsideFlow() {
             return (
               <div className="stepbox">
                 <h3>Case complete</h3>
+                <div className="chainbox">
+                  <p className="q">Put the story in order: tap the links from first cause to what you see at the bedside.</p>
+                  <ol className="chainlist">
+                    {c.chain.map((_, i) => {
+                      const k = order[i];
+                      const right = chainChecked && k === i;
+                      return <li key={i} className={chainChecked ? (right ? 'right' : 'wrong') : k == null ? 'empty' : ''}>
+                        {k == null ? '\u00a0' : c.chain[k]}
+                        {chainChecked && !right && <span className="should">should be: {c.chain[i]}</span>}
+                      </li>;
+                    })}
+                  </ol>
+                  {!chainChecked && <div className="choices chainpool" role="group" aria-label="Links">
+                    {shuffled(c.chain.length, ci + 3).map(k => (
+                      <button key={k} disabled={order.includes(k)} onClick={() => setOrder(o => [...o, k])}>{c.chain[k]}</button>
+                    ))}
+                  </div>}
+                  {!chainChecked && <div className="row">
+                    <button className="primary" disabled={order.length < c.chain.length}
+                      onClick={() => {
+                        const ok = order.every((k, i) => k === i);
+                        setChainChecked(true); record({ chain: ok });
+                        setHistory(h => ({ ...h, [c.id]: { ...h[c.id], chain: h[c.id]?.chain ?? ok } }));
+                      }}>Check</button>
+                    <button className="linkbtn" disabled={!order.length} onClick={() => setOrder(o => o.slice(0, -1))}>Undo</button>
+                    <button className="linkbtn" disabled={!order.length} onClick={() => setOrder([])}>Clear</button>
+                  </div>}
+                  {chainChecked && <Verdict ok={order.every((k, i) => k === i)}>{order.every((k, i) => k === i)
+                    ? 'Each link causes the next.' : 'Read the corrected chain: each link causes the next.'}</Verdict>}
+                </div>
                 <div className="scorebig mono">{s.pts} / {s.of}</div>
                 <ul className="tally">
                   <li className={result.vol ? 'y' : 'n'}>Wet or dry</li>
                   <li className={result.osm ? 'y' : 'n'}>Tonicity line</li>
                   <li className={result.icf ? 'y' : 'n'}>Cells</li>
+                  <li className={result.why ? 'y' : 'n'}>Cells: reason</li>
                   <li className={result.water ? 'y' : 'n'}>Kidney: water</li>
                   <li className={result.salt ? 'y' : 'n'}>Kidney: salt</li>
                   <li className={result.cause ? 'y' : 'n'}>Mechanism</li>
+                  <li className={result.chain ? 'y' : result.chain === false ? 'n' : ''}>Causal chain</li>
                   {!c.specialist && <li className={result.ecfNeed && result.cellNeed ? 'y' : 'n'}>Where salt and water go</li>}
                   {!c.specialist && <li className={result.fluid === 'best' ? 'y' : result.fluid === 'ok' ? 'm' : 'n'}>First treatment</li>}
                 </ul>
@@ -658,13 +701,20 @@ export default function BedsideFlow() {
               <Choice label="Cells" value={icfGuess} disabled={icfChecked}
                 options={[{ v: -1 as Snap, text: 'Water out · cells shrink' }, { v: 0 as Snap, text: 'No shift' }, { v: 1 as Snap, text: 'Water in · cells swell' }]}
                 onPick={pickIcf} />
+              <p className="q">Why?</p>
+              <Choice label="Reason" value={why} disabled={icfChecked}
+                options={[{ v: 1 as Snap, text: 'The ECF is lower than the cells' }, { v: -1 as Snap, text: 'The ECF is higher than the cells' }, { v: 0 as Snap, text: 'No gradient: both sides are equal' }]}
+                onPick={setWhy} />
               {!icfChecked && <>
                 <p className="hint">{icfGuess == null ? 'Pick one. Your prediction is drawn as an arrow.' : 'Your prediction is drawn as an arrow.'}</p>
-                <button className="primary" disabled={icfGuess == null}
-                  onClick={() => { setIcfChecked(true); record({ icf: icfGuess === truthIcfDir }); showShift('after'); }}>Check</button>
+                <button className="primary" disabled={icfGuess == null || why == null}
+                  onClick={() => { setIcfChecked(true); record({ icf: icfGuess === truthIcfDir, why: why === truthIcfDir }); showShift('after'); }}>Check</button>
               </>}
               {icfChecked && <>
                 <Verdict ok={icfGuess === truthIcfDir}>{c.icfNote} ICF {f1(truth.icf)} L (normal 28).</Verdict>
+                <Verdict ok={why === truthIcfDir}>{truthIcfDir === 0
+                  ? <>Reason: ECF and cells were both {f0(pre.ton)}. Without a gradient, water has no reason to move.</>
+                  : <>Reason: the ECF ({f0(pre.ton)}) was {truthIcfDir > 0 ? 'lower' : 'higher'} than the cells ({f0(cellTon)}). Water moves toward the higher osmolality.</>}</Verdict>
                 {shiftControls('1 · Fluid reaches the ECF',
                   truthIcfDir === 0 ? <>The fluid reached the ECF at {f0(pre.ton)}, the same as the cells. No gradient, so no water moves.</>
                     : <>The fluid reached the ECF first: ECF {f0(pre.ton)}, cells {f0(cellTon)}. Water moves toward the higher osmolality: {truthIcfDir > 0 ? 'into the cells' : 'out of the cells'}.</>,
