@@ -10,4 +10,6 @@ It also used fixed 75/25 volume splits rather than mass balance.
 
 `explorer/` is the corrected replacement for that dashboard (mass balance, before/after water shift). It is kept here, unpublished, now that `bedside/` is the public page.
 
+`bedside-2026-11-06/` is the bedside activity as it was before the staged water-shift changes of 6 Nov 2026 (ECF changes first, then water moves; two-stage treatment; phone layout). Open its `index.html` locally to run it.
+
 Nothing in `archive/` is published to GitHub Pages (see `_config.yml`).

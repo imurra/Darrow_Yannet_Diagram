@@ -3,14 +3,13 @@
  * Copyright (c) 2026 Ian Victor Joseph Murray · CC BY-NC-SA 4.0
  * http://creativecommons.org/licenses/by-nc-sa/4.0/
  */
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { BASE, labs, run, treat, State } from './engine';
 import { CASES, FLUIDS, FluidId, Need, Vol } from './cases';
 
 const CARD_URL = 'card.html';
 const STEPS = ['Danger', 'Wet or dry', 'Sodium', 'Cells', 'Kidney', 'Treatment'];
 const NORMAL_TON = 285;
-const ICF_SNAPS: Record<-1 | 0 | 1, number> = { [-1]: 23, 0: 28, 1: 33 };
 const TON_SNAPS: Record<-1 | 0 | 1, number> = { [-1]: 250, 0: NORMAL_TON, 1: 320 };
 
 type Snap = -1 | 0 | 1;
@@ -21,27 +20,33 @@ const f1 = (n: number) => n.toFixed(1);
 const dirOf = (d: number, eps: number): Snap => (d > eps ? 1 : d < -eps ? -1 : 0);
 
 // ---------- Diagram ----------
+type Line = { v: number; text: string; kind: 'pred' | 'truth' | 'wrong' };
 type DiagramProps = {
-  ecf: number | null; icf: number; ton: number | null;
-  ghost?: { ecf: number; icf: number; ton: number } | null;
-  predict?: 'icf' | 'ton' | null;   // main blocks are the student's prediction (drawn dashed)
-  wrongIcf?: number | null;         // outline of a wrong ICF prediction, kept after Check
-  wrongTon?: number | null;         // line of a wrong tonicity prediction, kept after Check
+  ecf: number | null; icf: number;
+  ton: number | null;               // ICF height (and ECF height unless ecfTon is given)
+  ecfTon?: number | null;           // ECF height when it differs from the cells (before water moves)
+  showOsm?: boolean;                // label each compartment's osmolality
+  lines?: Line[];                   // tonicity lines: the student's prediction, the lab value, a wrong guess
+  ghost?: { ecf: number; icf: number; ton: number } | null;   // before-treatment outline
+  preEcf?: { ecf: number; ton: number } | null;              // dotted ECF outline before water moved
   arrow?: Snap | null;              // water across the membrane: 1 into cells, -1 out, 0 no shift
+  arrowGuess?: boolean;             // arrow is the student's prediction
 };
 
-function Diagram({ ecf, icf, ton, ghost, predict, wrongIcf, wrongTon, arrow }: DiagramProps) {
+function Diagram({ ecf, icf, ton, ecfTon, showOsm, lines = [], ghost, preEcf, arrow, arrowGuess }: DiagramProps) {
   const W = 600, H = 320, PX = 9, left = 52, mem = left + 36 * PX, top = 24, bottom = 262, MAX = 380;
   const y = (o: number) => bottom - (Math.min(o, MAX) / MAX) * (bottom - top);
-  const tonY = y(ton ?? NORMAL_TON);
-  // Geometry as both attributes and style, so size changes animate.
+  const icfY = y(ton ?? NORMAL_TON);
+  const ecfY = y(ecfTon ?? ton ?? NORMAL_TON);
   const box = (x: number, yy: number, w: number, h: number) =>
     ({ x, y: yy, width: w, height: h, style: { x, y: yy, width: w, height: h } as React.CSSProperties });
-  const ay = tonY + (bottom - tonY) * 0.42;
+  const lowY = Math.max(icfY, ecfY);
+  const ay = lowY + (bottom - lowY) * 0.42;
+  const word = arrowGuess ? 'your prediction: ' : '';
 
   return (
     <svg viewBox={`0 0 ${W} ${H}`} className="dy-svg" role="img"
-      aria-label={`${predict ? 'Your prediction: ' : ''}ICF ${f1(icf)} liters${ecf != null ? `, ECF ${f1(ecf)} liters` : ''}${ton != null ? `, tonicity ${f0(ton)}` : ''}`}>
+      aria-label={`ICF ${f1(icf)} liters at ${f0(ton ?? NORMAL_TON)}${ecf != null ? `, ECF ${f1(ecf)} liters at ${f0(ecfTon ?? ton ?? NORMAL_TON)}` : ''}`}>
       {[0, 100, 200, 300].map(t => (
         <g key={t}>
           <line x1={left} x2={W - 12} y1={y(t)} y2={y(t)} className="grid" />
@@ -50,50 +55,51 @@ function Diagram({ ecf, icf, ton, ghost, predict, wrongIcf, wrongTon, arrow }: D
       ))}
       <text x={14} y={(top + bottom) / 2} textAnchor="middle" className="tick" transform={`rotate(-90 14 ${(top + bottom) / 2})`}>Tonicity (mOsm/L)</text>
 
-      {/* compartments */}
-      <rect {...box(mem - icf * PX, tonY, icf * PX, bottom - tonY)} className={`icf ${predict ? 'pred' : ''}`} />
-      {ecf != null && <rect {...box(mem, tonY, ecf * PX, bottom - tonY)} className={`ecf ${predict === 'ton' ? 'pred' : ''}`} />}
+      <rect {...box(mem - icf * PX, icfY, icf * PX, bottom - icfY)} className="icf" />
+      {ecf != null && <rect {...box(mem, ecfY, ecf * PX, bottom - ecfY)} className="ecf" />}
 
-      {/* before-treatment outline */}
       {ghost && <>
         <rect x={mem - ghost.icf * PX} y={y(ghost.ton)} width={ghost.icf * PX} height={bottom - y(ghost.ton)} className="ghost" />
         <rect x={mem} y={y(ghost.ton)} width={ghost.ecf * PX} height={bottom - y(ghost.ton)} className="ghost" />
       </>}
+      {preEcf && <>
+        <rect x={mem} y={y(preEcf.ton)} width={preEcf.ecf * PX} height={bottom - y(preEcf.ton)} className="preoutline" />
+        <text x={mem + preEcf.ecf * PX - 4} y={y(preEcf.ton) - 6} textAnchor="end" className="osmtext ecf-t">before water moved {f0(preEcf.ton)}</text>
+      </>}
 
-      {/* normal outlines */}
       <rect x={mem - BASE.icf * PX} y={y(NORMAL_TON)} width={BASE.icf * PX} height={bottom - y(NORMAL_TON)} className="normal" />
       <rect x={mem} y={y(NORMAL_TON)} width={BASE.ecf * PX} height={bottom - y(NORMAL_TON)} className="normal" />
       <line x1={left} x2={W - 12} y1={y(NORMAL_TON)} y2={y(NORMAL_TON)} className="ref" />
       <text x={W - 14} y={y(NORMAL_TON) - 6} textAnchor="end" className="reftext">normal 285</text>
 
-      {/* a wrong prediction stays visible next to the answer */}
-      {wrongIcf != null && <>
-        <rect x={mem - wrongIcf * PX} y={tonY} width={wrongIcf * PX} height={bottom - tonY} className="wrongpred" />
-        <text x={mem - wrongIcf * PX + 6} y={tonY - 6} className="predtext">your prediction</text>
+      {lines.map(l => (
+        <g key={l.kind}>
+          <line x1={left} x2={W - 12} y1={y(l.v)} y2={y(l.v)} className={l.kind === 'truth' ? 'tonline' : 'wrongline'} />
+          <text x={left + 6} y={y(l.v) + (l.kind === 'truth' ? 16 : -6)} className="predtext">{l.text}</text>
+        </g>
+      ))}
+
+      {showOsm && ecf != null && <>
+        <text x={mem - 8} y={icfY - 6} textAnchor="end" className="osmtext icf-t">cells {f0(ton ?? NORMAL_TON)}</text>
+        <text x={mem + 8} y={ecfY - 6} className="osmtext ecf-t">ECF {f0(ecfTon ?? ton ?? NORMAL_TON)}</text>
       </>}
-      {wrongTon != null && <>
-        <line x1={left} x2={W - 12} y1={y(wrongTon)} y2={y(wrongTon)} className="wrongline" />
-        <text x={left + 6} y={y(wrongTon) - 6} className="predtext">your prediction</text>
-      </>}
-      {predict === 'ton' && <text x={left + 6} y={tonY - 6} className="predtext">your line</text>}
 
       <line x1={mem} x2={mem} y1={top - 8} y2={bottom} className="membrane" />
       <text x={mem} y={top - 12} textAnchor="middle" className="tick">cell membrane</text>
 
-      {/* water across the membrane */}
-      {arrow === 1 && <g className="arrow">
+      {arrow === 1 && <g className={`arrow ${arrowGuess ? 'guess' : ''}`}>
         <line x1={mem + 56} x2={mem - 52} y1={ay} y2={ay} />
         <path d={`M ${mem - 64} ${ay} l 14 -8 v 16 z`} />
-        <text x={mem} y={ay - 12} textAnchor="middle" className="arrowtext">water in</text>
+        <text x={mem} y={ay - 12} textAnchor="middle" className="arrowtext">{word}water in</text>
       </g>}
-      {arrow === -1 && <g className="arrow">
+      {arrow === -1 && <g className={`arrow ${arrowGuess ? 'guess' : ''}`}>
         <line x1={mem - 56} x2={mem + 52} y1={ay} y2={ay} />
         <path d={`M ${mem + 64} ${ay} l -14 -8 v 16 z`} />
-        <text x={mem} y={ay - 12} textAnchor="middle" className="arrowtext">water out</text>
+        <text x={mem} y={ay - 12} textAnchor="middle" className="arrowtext">{word}water out</text>
       </g>}
-      {arrow === 0 && <text x={mem} y={ay} textAnchor="middle" className="arrowtext">no water shift</text>}
+      {arrow === 0 && <text x={mem} y={ay} textAnchor="middle" className="arrowtext">{word}no water shift</text>}
 
-      <text x={mem - (icf * PX) / 2} y={bottom - 14} textAnchor="middle" className="lab icf-t">{predict === 'icf' ? 'ICF (your prediction)' : 'ICF'}</text>
+      <text x={mem - (icf * PX) / 2} y={bottom - 14} textAnchor="middle" className="lab icf-t">ICF</text>
       {ecf != null && <text x={mem + (ecf * PX) / 2} y={bottom - 14} textAnchor="middle" className="lab ecf-t">ECF</text>}
       {ecf == null && <text x={mem + 63} y={(top + bottom) / 2 + 30} textAnchor="middle" className="tick">ECF: examine first</text>}
 
@@ -261,6 +267,15 @@ export default function BedsideFlow() {
   const [flash, setFlash] = useState(0);
   const [history, setHistory] = useState<Record<string, Result>>({});
   const [showRef, setShowRef] = useState(false);
+  const [shift, setShift] = useState<'before' | 'after'>('after');   // cells step: before or after water moves
+  const timer = useRef<number>();
+  const playShift = () => {
+    window.clearTimeout(timer.current);
+    setShift('before');
+    timer.current = window.setTimeout(() => setShift('after'), 2200);
+  };
+  const showShift = (v: 'before' | 'after') => { window.clearTimeout(timer.current); setShift(v); };
+  useEffect(() => () => window.clearTimeout(timer.current), []);
 
   const c = CASES[ci];
   const truth = useMemo(() => run(c.events).final, [ci]);
@@ -268,6 +283,13 @@ export default function BedsideFlow() {
   const labNa = Math.round(L.na);
   const gluC = L.glucose / 18;
   const truthIcfDir = dirOf(truth.icf - BASE.icf, 0.1);
+  // The instant the case's fluid has reached the ECF, before any water crosses the membrane.
+  const pre = useMemo(() => {
+    const sum = (k: 'water' | 'salt' | 'glu') => c.events.reduce((a, e) => a + (e[k] ?? 0), 0);
+    const ecf = Math.max(0.5, BASE.ecf + sum('water'));
+    return { ecf, ton: (BASE.salt + BASE.glu + sum('salt') + sum('glu')) / ecf };
+  }, [ci]);
+  const cellTon = BASE.icfEff / BASE.icf;
 
   const treated: State | null = fluid ? treat(truth, FLUIDS[fluid].event, c.adhUosm) : null;
   const TL = treated ? labs(treated) : null;
@@ -275,23 +297,52 @@ export default function BedsideFlow() {
   const reset = (i: number) => {
     setCi(i); setStep(0); setMaxStep(0); setVol(undefined); setTonGuess(undefined); setTonChecked(false); setIcfGuess(undefined); setIcfChecked(false);
     setWater(undefined); setSalt(undefined); setCause(undefined); setKidneyChecked(false);
-    setNeedEcf(undefined); setNeedCells(undefined); setNeedChecked(false); setFluid(undefined); setResult({});
+    setNeedEcf(undefined); setNeedCells(undefined); setNeedChecked(false); setFluid(undefined); setResult({}); showShift('after');
   };
 
   const volOk = vol != null && (vol === c.volume || (c.volumeAlso ?? []).includes(vol));
   const truthTonDir = dirOf(L.effOsm - NORMAL_TON, 5);
 
   // What the diagram shows at each step
-  const showEcf = step >= 1 && vol != null ? truth.ecf : null;
-  const ton = step < 2 ? null : step > 2 || tonChecked ? L.effOsm : tonGuess != null ? TON_SNAPS[tonGuess] : NORMAL_TON;
-  const icfShown = step < 3 ? BASE.icf : icfChecked || step > 3 ? truth.icf : icfGuess != null ? ICF_SNAPS[icfGuess] : BASE.icf;
-  const diag = step === 5 && treated && TL
-    ? <Diagram ecf={treated.ecf} icf={treated.icf} ton={TL.effOsm} ghost={{ ecf: truth.ecf, icf: truth.icf, ton: L.effOsm }} />
-    : <Diagram ecf={showEcf} icf={icfShown} ton={ton}
-        predict={step === 2 && !tonChecked && tonGuess != null ? 'ton' : step === 3 && !icfChecked && icfGuess != null ? 'icf' : null}
-        wrongTon={step === 2 && tonChecked && tonGuess != null && tonGuess !== truthTonDir ? TON_SNAPS[tonGuess] : null}
-        wrongIcf={step === 3 && icfChecked && icfGuess != null && icfGuess !== truthIcfDir ? ICF_SNAPS[icfGuess] : null}
-        arrow={step === 3 ? (icfChecked ? truthIcfDir : icfGuess ?? null) : null} />;
+  // What the diagram shows at each step. The case's fluid lands in the ECF first (stage 2);
+  // water then crosses the membrane until both sides match (stage 3).
+  const stage2 = { ecf: pre.ecf, icf: BASE.icf, ton: cellTon, ecfTon: pre.ton };
+  const final = { ecf: truth.ecf, icf: truth.icf, ton: L.effOsm };
+  const naLine: Line = { v: L.effOsm, text: `Na⁺ line ${f0(L.effOsm)}: both sides settle here`, kind: 'truth' };
+  const treatEv = fluid ? FLUIDS[fluid].event : null;
+  const tPre = treatEv ? (() => {
+    const ecf = Math.max(0.5, truth.ecf + treatEv.water);
+    return { ecf, ton: (truth.salt + truth.glu + (treatEv.salt ?? 0) + (treatEv.glu ?? 0)) / ecf };
+  })() : null;
+  const tDir: Snap = tPre ? dirOf(L.effOsm - tPre.ton, 1) : 0;
+  let diag: React.ReactNode;
+  if (step === 0 || (step === 1 && vol == null)) diag = <Diagram ecf={null} icf={BASE.icf} ton={null} />;
+  // Volume first: until the sodium question is checked, the ECF changes width only.
+  else if (step === 1 || (step === 2 && !tonChecked)) diag = <Diagram ecf={pre.ecf} icf={BASE.icf} ton={cellTon}
+    lines={step === 2 && tonGuess != null ? [{ v: TON_SNAPS[tonGuess], text: 'your line', kind: 'pred' }] : []} />;
+  else if (step === 2) diag = <Diagram {...stage2} showOsm={tonChecked}
+    lines={!tonChecked ? (tonGuess != null ? [{ v: TON_SNAPS[tonGuess], text: 'your line', kind: 'pred' }] : [])
+      : [naLine, ...(tonGuess != null && tonGuess !== truthTonDir ? [{ v: TON_SNAPS[tonGuess], text: 'your prediction', kind: 'wrong' } as Line] : [])]} />;
+  else if (step === 3 && (!icfChecked || shift === 'before'))
+    diag = <Diagram {...stage2} showOsm lines={[naLine]} arrow={icfChecked ? truthIcfDir : icfGuess ?? null} arrowGuess={!icfChecked} />;
+  else if (step === 3) diag = <Diagram {...final} arrow={truthIcfDir} preEcf={truthIcfDir !== 0 ? pre : null} />;
+  else if (step === 5 && treated && TL && tPre) {
+    const ghost = { ecf: truth.ecf, icf: truth.icf, ton: L.effOsm };
+    diag = shift === 'before'
+      ? <Diagram ecf={tPre.ecf} icf={truth.icf} ton={L.effOsm} ecfTon={tPre.ton} showOsm ghost={ghost} arrow={tDir} />
+      : <Diagram ecf={treated.ecf} icf={treated.icf} ton={TL.effOsm} ghost={ghost} arrow={tDir === 0 ? null : tDir} preEcf={tDir !== 0 ? tPre : null} />;
+  } else diag = <Diagram {...final} />;
+
+  const shiftControls = (first: string, before: React.ReactNode, after: React.ReactNode) => (
+    <div className="shiftbox">
+      <div className="choices" role="group" aria-label="Water shift">
+        <button aria-pressed={shift === 'before'} onClick={() => showShift('before')}>{first}</button>
+        <button aria-pressed={shift === 'after'} onClick={() => showShift('after')}>2 · Water moves</button>
+        <button className="linkbtn" onClick={playShift}>Replay</button>
+      </div>
+      <p className="hint">{shift === 'before' ? before : after}</p>
+    </div>
+  );
 
   // Only the first answer to each question is scored; Redo and Back never change it.
   const record = (r: Result) => setResult(prev => {
@@ -305,7 +356,7 @@ export default function BedsideFlow() {
   const redo = (n: number) => {
     if (n === 1) setVol(undefined);
     if (n === 2) { setTonGuess(undefined); setTonChecked(false); }
-    if (n === 3) { setIcfGuess(undefined); setIcfChecked(false); }
+    if (n === 3) { setIcfGuess(undefined); setIcfChecked(false); showShift('after'); }
     if (n === 4) { setWater(undefined); setSalt(undefined); setCause(undefined); setKidneyChecked(false); }
     if (n === 5) { setNeedEcf(undefined); setNeedCells(undefined); setNeedChecked(false); setFluid(undefined); }
   };
@@ -363,7 +414,7 @@ export default function BedsideFlow() {
             <div><dt>Vitals</dt><dd><span>{c.danger.circulation}</span><span>{c.danger.brain}</span></dd></div>
             {maxStep >= 1 && <div><dt>Exam</dt><dd>
               {c.exam.map(x => <span key={x}>{x}</span>)}
-              {vol != null && <span className="you">You: {vol} · ECF {f1(truth.ecf)} L</span>}
+              {vol != null && <span className="you">You: {vol}</span>}
             </dd></div>}
             {maxStep >= 2 && <div><dt>Labs</dt><dd>
               <span className="v">Na⁺ {labNa}</span>
@@ -417,7 +468,7 @@ export default function BedsideFlow() {
                 onPick={v => { setVol(v); record({ vol: v === c.volume || (c.volumeAlso ?? []).includes(v) }); }} />
               {vol != null && <>
                 <Verdict ok={volOk}>{c.volumeNote}</Verdict>
-                <p className="hint">The ECF block now shows this patient's volume: {f1(truth.ecf)} L (normal 14).</p>
+                <p className="hint">The fluid change lands in the ECF first. The green block shows its volume before any water crosses into or out of cells (dashed = normal, 14 L). Its height comes next, from the sodium.</p>
                 <div className="row"><button className="primary" onClick={() => go(2)}>Check the sodium</button>{resetBtn(1)}</div>
               </>}
             </div>
@@ -433,7 +484,7 @@ export default function BedsideFlow() {
           {step === 3 && (
             <div className="stepbox">
               <h3>4 · What did the cells do?</h3>
-              <p className="lead">Water follows tonicity. Predict under the diagram; your answer is drawn on it.</p>
+              <p className="lead">The diagram shows the moment the fluid reached the ECF, before any water crossed. Water moves toward the higher osmolality. Predict under the diagram.</p>
             </div>
           )}
 
@@ -445,6 +496,16 @@ export default function BedsideFlow() {
                 <div><span>Urine Na⁺</span><b>{c.urine.na}</b></div>
                 {c.urine.extra && <div><span>Also</span><b>{c.urine.extra}</b></div>}
               </div>
+              <details className="hintbox">
+                <summary>Hint: the kidney's vote</summary>
+                <table className="reftable"><tbody>
+                  <tr><td>U<sub>osm</sub> &gt; 100</td><td>Holding water (ADH on)</td></tr>
+                  <tr><td>U<sub>osm</sub> &lt; 100</td><td>Dumping water (ADH off)</td></tr>
+                  <tr><td>U<sub>Na</sub> &lt; 20</td><td>Holding salt: the kidney senses low perfusion</td></tr>
+                  <tr><td>U<sub>Na</sub> &gt; 20</td><td>Losing salt, or perfusion is fine</td></tr>
+                </tbody></table>
+                <p className="hint">For comparison, plasma is about 285 mOsm/L and serum Na⁺ 135–145. Urine has no fixed normal; read it against what the body needs. Perfusion beats tonicity: low effective volume turns ADH on even when Na⁺ is low.</p>
+              </details>
               <p className="q">Water</p>
               <Choice label="Water" value={water} disabled={kidneyChecked}
                 options={[{ v: 'holding' as const, text: 'Holding water' }, { v: 'dumping' as const, text: 'Dumping water' }]} onPick={setWater} />
@@ -501,7 +562,7 @@ export default function BedsideFlow() {
                 <p className="hint">Sodium speed limits: in chronic hyponatremia raise Na⁺ no more than 8–10 mmol/L in 24 h (risk: osmotic demyelination). In chronic hypernatremia lower it no more than 10–12 mmol/L in 24 h (risk: cerebral edema). The diagram shows one dose; real care rechecks Na⁺ every 2–6 h.</p>
                 <div className="fluids" role="group" aria-label="Treatment">
                   {(Object.keys(FLUIDS) as FluidId[]).map(f => (
-                    <button key={f} aria-pressed={fluid === f} onClick={() => { setFluid(f); if (result.fluid == null) record({ fluid: c.grades[f]?.[0] }); }}>
+                    <button key={f} aria-pressed={fluid === f} onClick={() => { setFluid(f); playShift(); if (result.fluid == null) record({ fluid: c.grades[f]?.[0] }); }}>
                       <b>{FLUIDS[f].name}</b><span>{FLUIDS[f].detail}</span>
                     </button>
                   ))}
@@ -512,6 +573,10 @@ export default function BedsideFlow() {
                     <div><span>ECF</span><b>{f1(truth.ecf)} → {f1(treated!.ecf)} L</b></div>
                     <div><span>ICF</span><b>{f1(truth.icf)} → {f1(treated!.icf)} L</b></div>
                   </div>
+                  {tPre && shiftControls('1 · Fluid reaches the ECF',
+                    tDir === 0 ? <>The fluid lands in the ECF at {f0(tPre.ton)}, the same as the cells ({f0(L.effOsm)}). No gradient, so no water moves.</>
+                      : <>The fluid lands in the ECF first: ECF {f0(tPre.ton)}, cells {f0(L.effOsm)}. Water moves toward the higher osmolality: {tDir > 0 ? 'into the cells' : 'out of the cells'}.</>,
+                    <>After the shift both sides are {f0(TL.effOsm)}. Dotted blue = before treatment.</>)}
                   <Verdict ok={c.grades[fluid]![0] === 'best' ? true : c.grades[fluid]![0] === 'ok' ? 'ok' : false}>{c.grades[fluid]![1]}</Verdict>
                   <div className="verdict meh"><b>Safety.</b> {c.safety}</div>
                   <p className="hint">Outline = before treatment. Try other options to compare; only your first choice is scored.</p>
@@ -550,6 +615,13 @@ export default function BedsideFlow() {
 
         <section className="figure" aria-label="Darrow–Yannet diagram">
           {flash > 0 && <div key={flash} className="flash" aria-hidden="true" />}
+          <div className="diagwrap">
+          {maxStep >= 2 && <div className="minilabs mono" aria-hidden="true">
+            <span>Na⁺ {labNa}</span><span>Glu {f0(L.glucose)}</span>
+            {(tonChecked || maxStep > 2) && <span>Ton {f0(L.effOsm)}</span>}
+            <span>Hct {f0(L.hct)}%</span>
+            {maxStep >= 4 && <><span>U<sub>osm</sub> {c.urine.osm}</span><span>U<sub>Na</sub> {c.urine.na}</span></>}
+          </div>}
           {diag}
           <div className="legend">
             <span><i className="sw icf" />ICF (cells)</span>
@@ -557,10 +629,11 @@ export default function BedsideFlow() {
             <span><i className="sw normal" />normal</span>
             {treated && <span><i className="sw ghost" />before treatment</span>}
           </div>
+          </div>
 
           {step === 2 && (
             <div className="predict">
-              <p className="q">Using Na⁺ and glucose from the Labs row: where does the tonicity line go?</p>
+              <p className="q">Using Na⁺ and glucose from the Labs row: where will both sides settle?</p>
               <Choice label="Tonicity line" value={tonGuess} disabled={tonChecked}
                 options={[{ v: 1 as Snap, text: 'Above normal' }, { v: 0 as Snap, text: 'At normal' }, { v: -1 as Snap, text: 'Below normal' }]}
                 onPick={pickTon} />
@@ -573,7 +646,7 @@ export default function BedsideFlow() {
                 <div className="formula mono">tonicity ≈ 2 × Na⁺ + glucose/18 = {f0(2 * labNa)} + {f0(gluC)} = <b>{f0(2 * labNa + gluC)}</b> (normal 285)</div>
                 <Verdict ok={tonGuess === truthTonDir}>{L.glucose > 300
                   ? <>Na⁺ is low, but glucose pushes tonicity <b>above</b> normal. Sodium alone would have fooled you.</>
-                  : <>Na⁺ {labNa} puts tonicity {truthTonDir > 0 ? 'above' : truthTonDir < 0 ? 'below' : 'at'} normal. The line now sits where this patient's water is.</>}</Verdict>
+                  : <>Na⁺ {labNa} puts tonicity {truthTonDir > 0 ? 'above' : truthTonDir < 0 ? 'below' : 'at'} normal. The blue line is where both sides will settle once water moves.</>}</Verdict>
                 <div className="row"><button className="primary" onClick={() => go(3)}>Predict the cells</button>{resetBtn(2)}</div>
               </>}
             </div>
@@ -581,17 +654,22 @@ export default function BedsideFlow() {
 
           {step === 3 && (
             <div className="predict">
-              <p className="q">Tonicity is {f0(L.effOsm)}. What did the cells do?</p>
+              <p className="q">ECF {f0(pre.ton)}, cells {f0(cellTon)}. Which way will water move?</p>
               <Choice label="Cells" value={icfGuess} disabled={icfChecked}
                 options={[{ v: -1 as Snap, text: 'Water out · cells shrink' }, { v: 0 as Snap, text: 'No shift' }, { v: 1 as Snap, text: 'Water in · cells swell' }]}
                 onPick={pickIcf} />
               {!icfChecked && <>
-                <p className="hint">{icfGuess == null ? 'Pick one. Your prediction is drawn on the diagram.' : 'Your prediction is drawn dashed on the diagram.'}</p>
+                <p className="hint">{icfGuess == null ? 'Pick one. Your prediction is drawn as an arrow.' : 'Your prediction is drawn as an arrow.'}</p>
                 <button className="primary" disabled={icfGuess == null}
-                  onClick={() => { setIcfChecked(true); record({ icf: icfGuess === truthIcfDir }); }}>Check</button>
+                  onClick={() => { setIcfChecked(true); record({ icf: icfGuess === truthIcfDir }); showShift('after'); }}>Check</button>
               </>}
               {icfChecked && <>
                 <Verdict ok={icfGuess === truthIcfDir}>{c.icfNote} ICF {f1(truth.icf)} L (normal 28).</Verdict>
+                {shiftControls('1 · Fluid reaches the ECF',
+                  truthIcfDir === 0 ? <>The fluid reached the ECF at {f0(pre.ton)}, the same as the cells. No gradient, so no water moves.</>
+                    : <>The fluid reached the ECF first: ECF {f0(pre.ton)}, cells {f0(cellTon)}. Water moves toward the higher osmolality: {truthIcfDir > 0 ? 'into the cells' : 'out of the cells'}.</>,
+                  truthIcfDir === 0 ? <>Nothing to equalize: both sides stay at {f0(L.effOsm)}.</>
+                    : <>Water moved until both sides reached the Na⁺ line, {f0(L.effOsm)}. Cells {truthIcfDir > 0 ? 'swelled' : 'shrank'} to {f1(truth.icf)} L; ECF ended at {f1(truth.ecf)} L (dotted = before water moved).</>)}
                 <div className="row"><button className="primary" onClick={() => go(4)}>Ask the kidney</button>{resetBtn(3)}</div>
               </>}
             </div>
