@@ -11,7 +11,7 @@ export const FLUIDS: Record<FluidId, { name: string; detail: string; event: Even
   ns: { name: '0.9% saline, 1 L', detail: 'Na⁺ 154', event: fluid(1, 308) },
   lr: { name: "Lactated Ringer's, 1 L", detail: 'Na⁺ 130', event: fluid(1, 273) },
   d5w: { name: 'D5W, 1 L', detail: 'free water once glucose is used', event: fluid(1, 0) },
-  hts: { name: '3% saline, 150 mL bolus', detail: 'Na⁺ 513', event: fluid(0.15, 1026) },
+  hts: { name: '3% saline, 150 mL bolus', detail: 'Na⁺ 513 · emergency bolus only; too fast a rise risks osmotic demyelination', event: fluid(0.15, 1026) },
   restrict: { name: 'Fluid restriction', detail: '≈1 L less free water', event: fluid(-1, 0) },
   loop: { name: 'Loop diuretic', detail: '≈1.5 L urine, Na⁺ 70', event: fluid(-1.5, 140) },
 };
@@ -33,6 +33,8 @@ export type Case = {
   needEcf: Need; needCells: Need; needNote: string;
   // Kidney keeps excreting salt at this urine osmolality after treatment (ADH stays on)
   adhUosm?: number;
+  // Safety and monitoring advice shown with every treatment choice
+  safety: string;
   grades: Partial<Record<FluidId, [Grade, string]>>;
 };
 
@@ -51,6 +53,7 @@ export const CASES: Case[] = [
     causes: [{ text: 'Isotonic GI fluid loss', correct: true }, { text: 'Diuretic use' }, { text: 'Adrenal insufficiency' }, { text: 'SIADH' }],
     causeNote: 'An appropriate kidney response points away from the kidney: the loss is from the gut.',
     needEcf: 'in', needCells: 'none', needNote: 'Fill the ECF; the cells are fine, so give fluid that does not change tonicity.',
+    safety: 'Na⁺ is normal, so there is no sodium speed limit here. Reassess volume after each bolus and check K⁺ and HCO₃⁻, which diarrhea also depletes.',
     grades: {
       ns: ['best', 'Isotonic: stays in the ECF and refills it without moving water into or out of cells.'],
       lr: ['best', 'Near-isotonic: refills the ECF; a common first choice for GI losses.'],
@@ -75,8 +78,9 @@ export const CASES: Case[] = [
     causeNote: 'Sweat lost some salt, but the large free-water gain with ADH on is what dropped Na⁺.',
     needEcf: 'none', needCells: 'out', needNote: 'Volume is about right. Brain cells are swollen, so water has to come out of them.',
     adhUosm: 450,
+    safety: 'Acute (under 48 h) symptomatic hyponatremia: give 3% saline as a bolus (Wilderness Medical Society: 100 mL, repeat every 10 min up to 3 times; European guideline: 150 mL). Recheck Na⁺ after each bolus. Aim for a 4–6 mmol/L rise, and no more than 10 mmol/L in 24 h. Avoid isotonic fluids unless the patient is in shock.',
     grades: {
-      hts: ['best', 'Symptomatic: a small hypertonic bolus raises tonicity and pulls water out of brain cells fast, with little volume.'],
+      hts: ['best', 'Symptomatic: a small hypertonic bolus raises tonicity and pulls water out of brain cells fast, with little volume. Recheck Na⁺ before repeating it.'],
       restrict: ['ok', 'Right direction, but too slow for a confused, vomiting patient.'],
       ns: ['harmful', 'With ADH on, the kidney excretes the salt in concentrated urine and keeps the water. Na⁺ falls further.'],
       lr: ['harmful', 'Hypotonic to this urine: adds free water and lowers Na⁺.'],
@@ -99,9 +103,10 @@ export const CASES: Case[] = [
     causeNote: 'Euvolemic, concentrated urine, urine Na⁺ over 20, and a lung mass: SIADH. Polydipsia would make dilute urine.',
     needEcf: 'none', needCells: 'out', needNote: 'Volume is fine. The cells hold excess water.',
     adhUosm: 600,
+    safety: 'Chronic hyponatremia: raise Na⁺ no more than 8–10 mmol/L in 24 h, and no more than 8 if osmotic demyelination risk is high (Na⁺ ≤105, low K⁺, alcohol use, malnutrition, liver disease). Too fast a rise can cause osmotic demyelination days later. Check Na⁺ every 4–6 h; D5W or desmopressin can bring an overshoot back down.',
     grades: {
       restrict: ['best', 'Removes the free water that ADH is holding. Slow and safe for mild symptoms.'],
-      hts: ['ok', 'Reserved for severe symptoms. Mild nausea does not need it.'],
+      hts: ['ok', 'Reserved for severe symptoms. Mild nausea does not need it, and in chronic hyponatremia a fast rise risks osmotic demyelination.'],
       ns: ['harmful', 'The saline trap: urine (600) is more concentrated than saline (308). The kidney excretes the salt and keeps the water, so Na⁺ falls.'],
       lr: ['harmful', 'Same trap, slightly worse.'],
       d5w: ['harmful', 'More free water for a kidney that cannot excrete it.'],
@@ -122,6 +127,7 @@ export const CASES: Case[] = [
     causes: [{ text: 'Low effective arterial volume (heart failure)', correct: true }, { text: 'SIADH' }, { text: 'Isotonic saline overload' }, { text: 'Adrenal insufficiency' }],
     causeNote: 'Wet, with urine Na⁺ under 20: the kidney thinks the circulation is underfilled. That is effective arterial volume, not total ECF.',
     needEcf: 'out', needCells: 'out', needNote: 'Remove ECF (salt and water), and more water than salt to bring tonicity up.',
+    safety: 'Check K⁺, Mg²⁺ and creatinine during diuresis. Fluid restriction helps the Na⁺. Keep the Na⁺ rise within 8–10 mmol/L in 24 h; diuresis rarely overshoots, but vaptans can.',
     grades: {
       loop: ['best', 'Removes salt and water; the urine is hypotonic, so Na⁺ also improves. Add fluid restriction.'],
       restrict: ['ok', 'Helps Na⁺, but does not remove the excess salt driving the edema.'],
@@ -145,6 +151,7 @@ export const CASES: Case[] = [
     causes: [{ text: 'Adrenal insufficiency (no aldosterone)', correct: true }, { text: 'Diarrhea' }, { text: 'SIADH' }, { text: 'Heart failure' }],
     causeNote: 'A dry patient losing salt in the urine means the kidney is the problem. Diuretics also do this; the history and skin point to Addison’s.',
     needEcf: 'in', needCells: 'out', needNote: 'Fill the ECF with salt. Restoring tonicity will draw water back out of the cells.',
+    safety: 'Give hydrocortisone 100 mg IV at once; do not wait for test results. Overshoot risk: once volume and cortisol are restored, ADH switches off and a water diuresis can raise Na⁺ too fast. Check Na⁺ every 2–4 h and keep the rise within 8–10 mmol/L in 24 h. If it rises faster, D5W or desmopressin can bring it back down.',
     grades: {
       ns: ['best', 'Restores salt and volume. Give hydrocortisone too; that fixes the cause.'],
       lr: ['ok', 'Refills volume, but less sodium than saline.'],
@@ -168,8 +175,9 @@ export const CASES: Case[] = [
     causes: [{ text: 'Not drinking (no access to water)', correct: true }, { text: 'Diabetes insipidus' }, { text: 'Salt ingestion' }, { text: 'Osmotic diuresis' }],
     causeNote: 'The kidney is doing everything right; the problem is intake. DI would make dilute urine.',
     needEcf: 'in', needCells: 'in', needNote: 'Mostly cells need water back; the ECF needs a little.',
+    safety: 'Treat shock first with saline. Then lower Na⁺ no faster than 0.5 mmol/L per hour (10–12 mmol/L in 24 h) when the hypernatremia is chronic or of unknown duration; faster lowering risks cerebral edema. Check Na⁺ every 2–4 h.',
     grades: {
-      d5w: ['best', 'Free water goes where it is needed: mostly into the cells. Correct slowly.'],
+      d5w: ['best', 'Free water goes where it is needed: mostly into the cells. Lower Na⁺ by no more than 10–12 mmol/L in 24 h.'],
       ns: ['ok', 'Use first only if hypotensive. It is hypotonic to this patient, but barely restores cell water.'],
       lr: ['ok', 'Similar to saline: fills volume, slow to fix tonicity.'],
       hts: ['harmful', 'Shrinks cells that are already shrunken.'],
@@ -191,6 +199,7 @@ export const CASES: Case[] = [
     causes: [{ text: 'Nephrogenic diabetes insipidus (lithium)', correct: true }, { text: 'Not drinking alone' }, { text: 'Osmotic diuresis' }, { text: 'SIADH' }],
     causeNote: 'High Na⁺ with dilute urine means the kidney is losing water. Lithium blocks ADH’s effect.',
     needEcf: 'none', needCells: 'in', needNote: 'The cells need water back; volume is close to normal.',
+    safety: 'Lower Na⁺ no more than 10–12 mmol/L in 24 h if it is chronic. Large volumes of D5W can cause hyperglycemia, which drives more urine loss; oral water is preferred if the patient can drink. Review lithium with the prescriber, as nephrogenic DI can persist after it is stopped.',
     grades: {
       d5w: ['best', 'Free water refills the cells. Also stop or review the lithium.'],
       ns: ['ok', 'Not harmful, but slow to fix tonicity, and the salt load increases urine output.'],
@@ -214,8 +223,9 @@ export const CASES: Case[] = [
     causes: [{ text: 'Osmotic diuresis from hyperglycemia', correct: true }, { text: 'SIADH' }, { text: 'Diabetes insipidus' }, { text: 'Diarrhea' }],
     causeNote: 'Glucose in the urine carries water and salt with it, so the kidney cannot hold either.',
     needEcf: 'in', needCells: 'in', needNote: 'Fill the ECF first. The cells need water too, but fixing glucose with insulin will move water back into them.',
+    safety: 'Use 0.9% saline first. Na⁺ will rise as glucose falls; that is expected. Track osmolality and aim for a fall of 3–8 mOsm/kg per hour, with glucose falling 4–6 mmol/L (72–108 mg/dL) per hour. Once corrected for glucose, Na⁺ should fall no more than 10 mmol/L in 24 h. Guidelines differ on when to start insulin; low-dose insulin usually follows fluids. Replace K⁺.',
     grades: {
-      ns: ['best', 'Volume first. Then insulin; as glucose falls, water returns to cells and Na⁺ rises.'],
+      ns: ['best', 'Volume first. As glucose falls, water returns to cells and Na⁺ rises. Insulin follows once fluids are under way.'],
       lr: ['ok', 'Also refills volume.'],
       d5w: ['harmful', 'Adds glucose to a patient whose problem is glucose.'],
       hts: ['harmful', 'Tonicity is already high.'],

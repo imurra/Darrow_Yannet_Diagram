@@ -8,6 +8,8 @@ Interactive case activity that follows the bedside order:
 5. Read the kidney (urine osm and Na⁺ → cause)
 6. Treatment (where salt and water should go, then a fluid)
 
+Each step has a Reset button; only the first answer is scored. Every treatment shows guideline-based safety advice (sodium correction limits, osmotic demyelination, overshoot). A Reference tab holds the diagram key, the six states, the kidney's vote, fluids, safety limits, all cases and sources. `card.html` is the printable post-activity card ("Darrow–Yannett, read backward").
+
 8 cases: diarrhea, marathon runner, SIADH, heart failure, Addison's, elderly dehydration, lithium DI, hyperglycemia.
 
 `index.html` is self-contained and works offline: open it in a browser or host it with GitHub Pages.

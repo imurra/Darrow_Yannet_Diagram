@@ -7,7 +7,7 @@ import React, { useMemo, useState } from 'react';
 import { BASE, labs, run, treat, State } from './engine';
 import { CASES, FLUIDS, FluidId, Need, Vol } from './cases';
 
-const CARD_URL = 'https://claude.ai/artifact/8mQxNPryeMczu5kGyH91Ti';
+const CARD_URL = 'card.html';
 const STEPS = ['Danger', 'Wet or dry', 'Sodium', 'Cells', 'Kidney', 'Treatment'];
 const NORMAL_TON = 285;
 const ICF_SNAPS: Record<-1 | 0 | 1, number> = { [-1]: 23, 0: 28, 1: 33 };
@@ -130,6 +130,102 @@ const NEED_TEXT: Record<'ecf' | 'cells', Record<Need, string>> = {
   cells: { in: 'Water in', none: 'Leave them', out: 'Water out' },
 };
 
+
+// ---------- Reference ----------
+const SOURCES: { text: string; url: string }[] = [
+  { text: 'Spasovski G, et al. Clinical practice guideline on diagnosis and treatment of hyponatraemia. Eur J Endocrinol 2014;170:G1–G47', url: 'https://doi.org/10.1530/EJE-13-1020' },
+  { text: 'Verbalis JG, et al. Diagnosis, evaluation, and treatment of hyponatremia: expert panel recommendations. Am J Med 2013;126:S1–S42', url: 'https://doi.org/10.1016/j.amjmed.2013.07.006' },
+  { text: 'Bennett BL, et al. Wilderness Medical Society guidelines for exercise-associated hyponatremia: 2019 update. Wilderness Environ Med 2020;31:50–62', url: 'https://www.aafp.org/pubs/afp/issues/2021/0215/p252.html' },
+  { text: 'Perianayagam A, et al. DDAVP is effective in preventing and reversing inadvertent overcorrection of hyponatremia. Clin J Am Soc Nephrol 2008;3:331–336', url: 'https://pmc.ncbi.nlm.nih.gov/articles/PMC2390955' },
+  { text: 'Adrogué HJ, Madias NE. Hypernatremia. N Engl J Med 2000;342:1493–1499', url: 'https://doi.org/10.1056/NEJM200005183422006' },
+  { text: 'Joint British Diabetes Societies. Management of the hyperosmolar hyperglycaemic state (HHS) in adults', url: 'https://www.rcemlearning.co.uk/reference/hyperosmolar-hyperglycaemic-state/' },
+  { text: 'Society for Endocrinology. Emergency management of adrenal crisis', url: 'https://endocrinology.org/adrenal-crisis' },
+];
+
+const STATES: [string, string, string, string][] = [
+  ['Na⁺ ↑ · ECF ↓', 'Hyperosmotic contraction', 'Sweating, poor water intake, diabetes insipidus', 'Cells shrink'],
+  ['Na⁺ ↑ · ECF ↑', 'Hyperosmotic expansion', 'Hypertonic saline, salt ingestion, NaHCO₃', 'Cells shrink'],
+  ['Na⁺ — · ECF ↓', 'Isosmotic contraction', 'Diarrhea, hemorrhage, burns', 'No shift'],
+  ['Na⁺ — · ECF ↑', 'Isosmotic expansion', 'Isotonic saline overload', 'No shift'],
+  ['Na⁺ ↓ · ECF ↓', 'Hyposmotic contraction', 'Diuretics, adrenal insufficiency, losses replaced with water', 'Cells swell'],
+  ['Na⁺ ↓ · ECF ↑', 'Hyposmotic expansion', 'SIADH, water intoxication, heart failure, cirrhosis', 'Cells swell'],
+];
+
+function Reference({ onClose }: { onClose: () => void }) {
+  return (
+    <section className="panel refpage" aria-label="Reference">
+      <div className="row"><h2 style={{ margin: 0 }}>Reference</h2><span className="spacer" style={{ flex: 1 }} /><button className="linkbtn" onClick={onClose}>Back to the case</button></div>
+
+      <p><a href={CARD_URL}>Post-activity card: Darrow–Yannet, read backward</a> (printable, one page).</p>
+
+      <h3>The diagram</h3>
+      <ul>
+        <li>The cell membrane is the vertical line. ICF (cells, pink) is on the left; ECF (green) is on the right.</li>
+        <li>Block width is volume (L). Block height is tonicity (mOsm/L). Dashed outlines show normal: ICF 28 L, ECF 14 L, tonicity 285.</li>
+        <li>Tonicity ≈ 2 × Na⁺ + glucose/18 (glucose in mg/dL). Urea crosses cell membranes, so it raises measured osmolality but does not move water.</li>
+        <li>Water moves until both sides have the same tonicity: tonicity down → cells swell; tonicity up → cells shrink.</li>
+      </ul>
+
+      <h3>The six bedside steps</h3>
+      <ol>
+        <li><b>Danger.</b> The brain reports on cell volume (tonicity); the circulation reports on the ECF.</li>
+        <li><b>Wet or dry.</b> Orthostatics, JVP, edema, mucous membranes and weight tell you what the ECF is doing.</li>
+        <li><b>Sodium.</b> Na⁺ and glucose set the tonicity line: above, at or below 285.</li>
+        <li><b>Cells.</b> Water follows tonicity: in, out or no shift.</li>
+        <li><b>Kidney.</b> Urine osmolality and urine Na⁺ show whether the kidney is holding or losing water and salt, and point to the cause.</li>
+        <li><b>Treatment.</b> Decide where salt and water need to go, then pick a fluid.</li>
+      </ol>
+
+      <h3>The six states</h3>
+      <table className="reftable"><thead><tr><th>Na⁺ · ECF</th><th>State</th><th>Common causes</th><th>Cells</th></tr></thead>
+        <tbody>{STATES.map(r => <tr key={r[1]}>{r.map((x, k) => <td key={k}>{x}</td>)}</tr>)}</tbody></table>
+
+      <h3>The kidney's vote</h3>
+      <table className="reftable"><tbody>
+        <tr><td>U<sub>osm</sub> &gt; 100</td><td>Holding water (ADH on)</td></tr>
+        <tr><td>U<sub>osm</sub> &lt; 100</td><td>Dumping water (ADH off)</td></tr>
+        <tr><td>U<sub>Na</sub> &lt; 20</td><td>Holding salt: the kidney senses low perfusion</td></tr>
+        <tr><td>U<sub>Na</sub> &gt; 20</td><td>Losing salt, or perfusion is fine</td></tr>
+      </tbody></table>
+      <p className="hint">Traps: high glucose lowers Na⁺ while cells shrink. SIADH looks euvolemic because only a third of retained water stays in the ECF. Low effective volume turns ADH on even when Na⁺ is low.</p>
+
+      <h3>Fluids and where they go</h3>
+      <table className="reftable"><thead><tr><th>Option</th><th>Content</th><th>Where it goes</th></tr></thead><tbody>
+        <tr><td>0.9% saline</td><td>Na⁺ 154 (308 mOsm/L)</td><td>Stays in the ECF. If ADH is on and urine is more concentrated than 308, the salt is excreted and the water kept, so Na⁺ falls.</td></tr>
+        <tr><td>Lactated Ringer's</td><td>Na⁺ 130 (273 mOsm/L)</td><td>Mostly ECF; slightly hypotonic.</td></tr>
+        <tr><td>D5W</td><td>Free water once glucose is used</td><td>Spreads across all body water: about two-thirds into cells.</td></tr>
+        <tr><td>3% saline</td><td>Na⁺ 513 (1026 mOsm/L)</td><td>Raises tonicity and pulls water out of cells. Emergency bolus only.</td></tr>
+        <tr><td>Fluid restriction</td><td>Less free water in</td><td>Na⁺ rises slowly.</td></tr>
+        <tr><td>Loop diuretic</td><td>Urine Na⁺ about 70</td><td>Removes salt and more water: hypotonic loss.</td></tr>
+      </tbody></table>
+
+      <h3>Safety: sodium speed limits</h3>
+      <ul>
+        <li><b>Chronic hyponatremia</b> (over 48 h or unknown): raise Na⁺ no more than 8–10 mmol/L in 24 h, and no more than 8 if risk is high (Na⁺ ≤105, low K⁺, alcohol use, malnutrition, liver disease). Faster rises can cause osmotic demyelination days later.</li>
+        <li><b>Severe symptoms</b> (seizures, coma, confusion with vomiting): 3% saline bolus (European guideline 150 mL; Wilderness Medical Society 100 mL for exercise-associated hyponatremia), recheck Na⁺, and repeat until symptoms improve or Na⁺ has risen 5 mmol/L.</li>
+        <li><b>Watch for overshoot</b> when the cause of ADH release goes away: volume restored, cortisol replaced, thiazide or SSRI stopped. A water diuresis can raise Na⁺ fast; D5W or desmopressin can bring it back down.</li>
+        <li><b>Chronic hypernatremia:</b> lower Na⁺ no faster than 0.5 mmol/L per hour (10–12 mmol/L in 24 h). Faster lowering risks cerebral edema. Treat shock first.</li>
+        <li><b>HHS:</b> 0.9% saline first; a rising Na⁺ is expected as glucose falls. Aim for an osmolality fall of 3–8 mOsm/kg per hour.</li>
+        <li><b>Adrenal crisis:</b> hydrocortisone 100 mg IV at once, with 0.9% saline.</li>
+      </ul>
+
+      <h3>The cases</h3>
+      <table className="reftable"><thead><tr><th>Case</th><th>Cause</th><th>Best first treatment</th><th>Safety</th></tr></thead><tbody>
+        {CASES.map((k, i) => {
+          const best = (Object.keys(FLUIDS) as FluidId[]).filter(f => k.grades[f]?.[0] === 'best').map(f => FLUIDS[f].name).join(' or ');
+          return <tr key={k.id}><td>{i + 1}. {k.title}</td><td>{k.causes.find(x => x.correct)?.text}</td><td>{best}</td><td>{k.safety}</td></tr>;
+        })}
+      </tbody></table>
+
+      <h3>Teaching model</h3>
+      <p>42 L total body water (ICF 28 L, ECF 14 L). Only Na⁺ salts and glucose are effective osmoles; ICF solute is fixed. Urine values are illustrative. Each treatment shows a single dose; real care rechecks Na⁺ every 2–6 h. This is a teaching tool, not a dosing guide.</p>
+
+      <h3>Sources</h3>
+      <ol className="sources">{SOURCES.map(x => <li key={x.url}><a href={x.url} target="_blank" rel="noopener">{x.text}</a></li>)}</ol>
+    </section>
+  );
+}
+
 // ---------- App ----------
 export default function BedsideFlow() {
   const [ci, setCi] = useState(0);
@@ -151,6 +247,7 @@ export default function BedsideFlow() {
   const [result, setResult] = useState<Result>({});
   const [flash, setFlash] = useState(0);
   const [history, setHistory] = useState<Record<string, Result>>({});
+  const [showRef, setShowRef] = useState(false);
 
   const c = CASES[ci];
   const truth = useMemo(() => run(c.events).final, [ci]);
@@ -199,6 +296,9 @@ export default function BedsideFlow() {
     if (n === 4) { setWater(undefined); setSalt(undefined); setCause(undefined); setKidneyChecked(false); }
     if (n === 5) { setNeedEcf(undefined); setNeedCells(undefined); setNeedChecked(false); setFluid(undefined); }
   };
+  const resetBtn = (n: number) => (
+    <button className="linkbtn" onClick={() => redo(n)} title="Clear your answer to this step and try again. Your first answer is still the one scored.">Reset this step</button>
+  );
   const answered = [true, vol != null, tonChecked, icfChecked, kidneyChecked, needChecked][step] ?? false;
   const finish = () => { setHistory(h => ({ ...h, [c.id]: result })); go(6); };
 
@@ -225,15 +325,20 @@ export default function BedsideFlow() {
 
       <ol className="progress" aria-label="Steps">
         {STEPS.map((s, i) => (
-          <li key={s} className={i === step ? 'now' : i <= maxStep ? 'done' : ''}>
+          <li key={s} className={!showRef && i === step ? 'now' : i <= maxStep ? 'done' : ''}>
             {i <= maxStep
-              ? <button onClick={() => setStep(i)} aria-current={i === step ? 'step' : undefined}><span>{i + 1}</span>{s}</button>
+              ? <button onClick={() => { setShowRef(false); setStep(i); }} aria-current={!showRef && i === step ? 'step' : undefined}><span>{i + 1}</span>{s}</button>
               : <div><span>{i + 1}</span>{s}</div>}
           </li>
         ))}
+        <li className={showRef ? 'now ref' : 'ref'}>
+          <button onClick={() => setShowRef(r => !r)} aria-pressed={showRef}><span>i</span>Reference</button>
+        </li>
       </ol>
 
-      <div className="layout">
+      {showRef && <Reference onClose={() => setShowRef(false)} />}
+
+      <div className="layout" hidden={showRef}>
         <section className="panel" aria-live="polite">
           <div className="story">
             <div className="eyebrow">Case {ci + 1} of {CASES.length}</div>
@@ -271,7 +376,6 @@ export default function BedsideFlow() {
 
           <div className="stepnav">
             {step > 0 && <button className="linkbtn" onClick={() => setStep(step - 1)}>← Back</button>}
-            {step >= 1 && step <= 5 && answered && <button className="linkbtn" onClick={() => redo(step)}>Redo this step</button>}
             <span className="spacer" />
             {maxStep > 0 && <button className="linkbtn" onClick={() => reset(ci)}>Restart case</button>}
           </div>
@@ -301,7 +405,7 @@ export default function BedsideFlow() {
               {vol != null && <>
                 <Verdict ok={volOk}>{c.volumeNote}</Verdict>
                 <p className="hint">The ECF block now shows this patient's volume: {f1(truth.ecf)} L (normal 14).</p>
-                <button className="primary" onClick={() => go(2)}>Check the sodium</button>
+                <div className="row"><button className="primary" onClick={() => go(2)}>Check the sodium</button>{resetBtn(1)}</div>
               </>}
             </div>
           )}
@@ -309,11 +413,7 @@ export default function BedsideFlow() {
           {step === 2 && (
             <div className="stepbox">
               <h3>3 · Where does sodium put the line?</h3>
-              <div className="labs">
-                <div><span>Serum Na⁺</span><b>{labNa}</b></div>
-                <div><span>Glucose</span><b>{f0(L.glucose)} mg/dL</b></div>
-              </div>
-              <p className="lead">Na⁺ and glucose set the tonicity. Predict under the diagram; your answer is drawn on it.</p>
+              <p className="lead">Read Na⁺ and glucose in the Labs row above. Together they set the tonicity. Predict under the diagram; your answer is drawn on it.</p>
             </div>
           )}
 
@@ -350,7 +450,7 @@ export default function BedsideFlow() {
               {kidneyChecked && <>
                 <Verdict ok={water === c.water && salt === c.salt ? true : water === c.water || salt === c.salt ? 'ok' : false}>{c.kidneyNote}</Verdict>
                 <Verdict ok={!!c.causes[cause!].correct}>{c.causeNote}</Verdict>
-                <button className="primary" onClick={() => go(5)}>Treat</button>
+                <div className="row"><button className="primary" onClick={() => go(5)}>Treat</button>{resetBtn(4)}</div>
               </>}
             </div>
           )}
@@ -368,7 +468,9 @@ export default function BedsideFlow() {
                 onClick={() => { setNeedChecked(true); record({ ecfNeed: needEcf === c.needEcf, cellNeed: needCells === c.needCells }); }}>Check</button>}
               {needChecked && <>
                 <Verdict ok={needEcf === c.needEcf && needCells === c.needCells ? true : needEcf === c.needEcf || needCells === c.needCells ? 'ok' : false}>{c.needNote}</Verdict>
+                {!fluid && resetBtn(5)}
                 <p className="q">Now pick what to give. Watch where it goes.</p>
+                <p className="hint">Sodium speed limits: in chronic hyponatremia raise Na⁺ no more than 8–10 mmol/L in 24 h (risk: osmotic demyelination). In chronic hypernatremia lower it no more than 10–12 mmol/L in 24 h (risk: cerebral edema). The diagram shows one dose; real care rechecks Na⁺ every 2–6 h.</p>
                 <div className="fluids" role="group" aria-label="Treatment">
                   {(Object.keys(FLUIDS) as FluidId[]).map(f => (
                     <button key={f} aria-pressed={fluid === f} onClick={() => { setFluid(f); if (result.fluid == null) record({ fluid: c.grades[f]?.[0] }); }}>
@@ -383,8 +485,9 @@ export default function BedsideFlow() {
                     <div><span>ICF</span><b>{f1(truth.icf)} → {f1(treated!.icf)} L</b></div>
                   </div>
                   <Verdict ok={c.grades[fluid]![0] === 'best' ? true : c.grades[fluid]![0] === 'ok' ? 'ok' : false}>{c.grades[fluid]![1]}</Verdict>
+                  <div className="verdict meh"><b>Safety.</b> {c.safety}</div>
                   <p className="hint">Outline = before treatment. Try other options to compare; only your first choice is scored.</p>
-                  <button className="primary" onClick={finish}>Finish case</button>
+                  <div className="row"><button className="primary" onClick={finish}>Finish case</button>{resetBtn(5)}</div>
                 </>}
               </>}
             </div>
@@ -410,7 +513,7 @@ export default function BedsideFlow() {
                 <p className="hint">{done} of {CASES.length} cases done.</p>
                 <div className="row">
                   {ci < CASES.length - 1 && <button className="primary" onClick={() => reset(ci + 1)}>Next case</button>}
-                  <a className="ghostbtn" href={CARD_URL} target="_blank" rel="noopener">Post-activity: Darrow–Yannett, read backward</a>
+                  <a className="ghostbtn" href={CARD_URL}>Post-activity: Darrow–Yannett, read backward</a>
                 </div>
               </div>
             );
@@ -429,7 +532,7 @@ export default function BedsideFlow() {
 
           {step === 2 && (
             <div className="predict">
-              <p className="q">Na⁺ {labNa}, glucose {f0(L.glucose)}: where does the tonicity line go?</p>
+              <p className="q">Using Na⁺ and glucose from the Labs row: where does the tonicity line go?</p>
               <Choice label="Tonicity line" value={tonGuess} disabled={tonChecked}
                 options={[{ v: 1 as Snap, text: 'Above normal' }, { v: 0 as Snap, text: 'At normal' }, { v: -1 as Snap, text: 'Below normal' }]}
                 onPick={pickTon} />
@@ -443,7 +546,7 @@ export default function BedsideFlow() {
                 <Verdict ok={tonGuess === truthTonDir}>{L.glucose > 300
                   ? <>Na⁺ is low, but glucose pushes tonicity <b>above</b> normal. Sodium alone would have fooled you.</>
                   : <>Na⁺ {labNa} puts tonicity {truthTonDir > 0 ? 'above' : truthTonDir < 0 ? 'below' : 'at'} normal. The line now sits where this patient's water is.</>}</Verdict>
-                <button className="primary" onClick={() => go(3)}>Predict the cells</button>
+                <div className="row"><button className="primary" onClick={() => go(3)}>Predict the cells</button>{resetBtn(2)}</div>
               </>}
             </div>
           )}
@@ -461,7 +564,7 @@ export default function BedsideFlow() {
               </>}
               {icfChecked && <>
                 <Verdict ok={icfGuess === truthIcfDir}>{c.icfNote} ICF {f1(truth.icf)} L (normal 28).</Verdict>
-                <button className="primary" onClick={() => go(4)}>Ask the kidney</button>
+                <div className="row"><button className="primary" onClick={() => go(4)}>Ask the kidney</button>{resetBtn(3)}</div>
               </>}
             </div>
           )}
