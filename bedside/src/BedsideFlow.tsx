@@ -184,7 +184,7 @@ function Reference({ onClose }: { onClose: () => void }) {
         <li><b>Wet or dry.</b> Orthostatics, JVP, edema, mucous membranes and weight tell you what the ECF is doing.</li>
         <li><b>Sodium.</b> Na⁺ and glucose set the tonicity line: above, at or below 285.</li>
         <li><b>Cells.</b> Water follows tonicity: in, out or no shift.</li>
-        <li><b>Kidney.</b> Urine osmolality and urine Na⁺ show whether the kidney is holding or losing water and salt, and point to the cause.</li>
+        <li><b>Kidney.</b> Urine osmolality and urine Na⁺ show whether the kidney is holding or losing water and salt, and point to the mechanism.</li>
         <li><b>Treatment.</b> Decide where salt and water need to go, then pick a fluid.</li>
       </ol>
 
@@ -222,7 +222,7 @@ function Reference({ onClose }: { onClose: () => void }) {
       </ul>
 
       <h3>The cases</h3>
-      <table className="reftable"><thead><tr><th>Case</th><th>Cause</th><th>Best first treatment</th><th>Safety</th><th>Learn more</th></tr></thead><tbody>
+      <table className="reftable"><thead><tr><th>Case</th><th>Mechanism</th><th>Best first treatment</th><th>Safety</th><th>Learn more</th></tr></thead><tbody>
         {CASES.map((k, i) => {
           const best = k.specialist ? 'Emergency: specialist management' : (Object.keys(FLUIDS) as FluidId[]).filter(f => k.grades[f]?.[0] === 'best').map(f => FLUIDS[f].name).join(' or ');
           const more = LEARN[k.id];
@@ -451,8 +451,8 @@ export default function BedsideFlow() {
               <p className="q">Salt</p>
               <Choice label="Salt" value={salt} disabled={kidneyChecked}
                 options={[{ v: 'holding' as const, text: 'Holding salt' }, { v: 'losing' as const, text: 'Losing salt' }]} onPick={setSalt} />
-              <p className="q">So the cause is…</p>
-              <div className="causes" role="group" aria-label="Cause">
+              <p className="q">So the mechanism is…</p>
+              <div className="causes" role="group" aria-label="Mechanism">
                 {c.causes.map((k, i) => (
                   <button key={k.text} aria-pressed={cause === i} disabled={kidneyChecked} onClick={() => setCause(i)}
                     className={kidneyChecked && k.correct ? 'right' : ''}>{k.text}</button>
@@ -534,7 +534,7 @@ export default function BedsideFlow() {
                   <li className={result.icf ? 'y' : 'n'}>Cells</li>
                   <li className={result.water ? 'y' : 'n'}>Kidney: water</li>
                   <li className={result.salt ? 'y' : 'n'}>Kidney: salt</li>
-                  <li className={result.cause ? 'y' : 'n'}>Cause</li>
+                  <li className={result.cause ? 'y' : 'n'}>Mechanism</li>
                   {!c.specialist && <li className={result.ecfNeed && result.cellNeed ? 'y' : 'n'}>Where salt and water go</li>}
                   {!c.specialist && <li className={result.fluid === 'best' ? 'y' : result.fluid === 'ok' ? 'm' : 'n'}>First treatment</li>}
                 </ul>
