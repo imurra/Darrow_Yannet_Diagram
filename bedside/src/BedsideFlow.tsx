@@ -4,16 +4,16 @@
  * http://creativecommons.org/licenses/by-nc-sa/4.0/
  */
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { BASE, labs, run, treat, State } from './engine';
-import { CASES, FLUIDS, FluidId, Need, Vol } from './cases';
+import { BASE, labs, run } from './engine';
+import { CASES, Danger, Vol } from './cases';
 
 const CARD_URL = 'card.html';
-const STEPS = ['Danger', 'Wet or dry', 'Sodium', 'Cells', 'Kidney', 'Treatment'];
+const STEPS = ['Danger', 'Wet or dry', 'Sodium', 'Cells', 'Kidney', 'Debrief'];
 const NORMAL_TON = 285;
 const TON_SNAPS: Record<-1 | 0 | 1, number> = { [-1]: 250, 0: NORMAL_TON, 1: 320 };
 
 type Snap = -1 | 0 | 1;
-type Result = { vol?: boolean; osm?: boolean; icf?: boolean; water?: boolean; salt?: boolean; cause?: boolean; why?: boolean; chain?: boolean; ecfNeed?: boolean; cellNeed?: boolean; fluid?: 'best' | 'ok' | 'harmful' };
+type Result = { danger?: boolean; vol?: boolean; osm?: boolean; icf?: boolean; why?: boolean; water?: boolean; salt?: boolean; role?: boolean; chain?: boolean };
 
 // Fixed shuffle per case so the chain never starts in order.
 function shuffled(n: number, seed: number): number[] {
@@ -139,12 +139,6 @@ const Verdict = ({ ok, children }: { ok: boolean | 'ok'; children: React.ReactNo
   </div>
 );
 
-const NEED_TEXT: Record<'ecf' | 'cells', Record<Need, string>> = {
-  ecf: { in: 'Fill it', none: 'Leave it', out: 'Remove fluid' },
-  cells: { in: 'Water in', none: 'Leave them', out: 'Water out' },
-};
-
-
 // ---------- Reference ----------
 const SOURCES: { text: string; url: string }[] = [
   { text: 'Spasovski G, et al. Clinical practice guideline on diagnosis and treatment of hyponatraemia. Eur J Endocrinol 2014;170:G1–G47', url: 'https://doi.org/10.1530/EJE-13-1020' },
@@ -192,14 +186,14 @@ function Reference({ onClose }: { onClose: () => void }) {
         <li>Water moves until both sides have the same tonicity: tonicity down → cells swell; tonicity up → cells shrink.</li>
       </ul>
 
-      <h3>The six bedside steps</h3>
+      <h3>The six steps</h3>
       <ol>
-        <li><b>Danger.</b> The brain reports on cell volume (tonicity); the circulation reports on the ECF.</li>
+        <li><b>Danger.</b> Brain, circulation, both or neither? The brain reports on cell volume (tonicity); the circulation reports on the ECF.</li>
         <li><b>Wet or dry.</b> Orthostatics, JVP, edema, mucous membranes and weight tell you what the ECF is doing.</li>
         <li><b>Sodium.</b> Na⁺ and glucose set the tonicity line: above, at or below 285.</li>
         <li><b>Cells.</b> Water follows tonicity: in, out or no shift.</li>
-        <li><b>Kidney.</b> Urine osmolality and urine Na⁺ show whether the kidney is holding or losing water and salt, and point to the mechanism.</li>
-        <li><b>Treatment.</b> Decide where salt and water need to go, then pick a fluid.</li>
+        <li><b>Kidney.</b> Urine osmolality and urine Na⁺ show whether the kidney is holding or losing water and salt, and whether that response is homeostatic or part of the problem.</li>
+        <li><b>Put the story together.</b> Order the causal chain, then read the debrief.</li>
       </ol>
 
       <h3>The six states</h3>
@@ -215,37 +209,16 @@ function Reference({ onClose }: { onClose: () => void }) {
       </tbody></table>
       <p className="hint">Traps: high glucose lowers Na⁺ while cells shrink. SIADH looks euvolemic because only a third of retained water stays in the ECF. Low effective volume turns ADH on even when Na⁺ is low.</p>
 
-      <h3>Fluids and where they go</h3>
-      <table className="reftable"><thead><tr><th>Option</th><th>Content</th><th>Where it goes</th></tr></thead><tbody>
-        <tr><td>0.9% saline</td><td>Na⁺ 154 (308 mOsm/L)</td><td>Stays in the ECF. If ADH is on and urine is more concentrated than 308, the salt is excreted and the water kept, so Na⁺ falls.</td></tr>
-        <tr><td>Lactated Ringer's</td><td>Na⁺ 130 (273 mOsm/L)</td><td>Mostly ECF; slightly hypotonic.</td></tr>
-        <tr><td>D5W</td><td>Free water once glucose is used</td><td>Spreads across all body water: about two-thirds into cells.</td></tr>
-        <tr><td>3% saline</td><td>Na⁺ 513 (1026 mOsm/L)</td><td>Raises tonicity and pulls water out of cells. Emergency use by a specialist team only; not a routine treatment.</td></tr>
-        <tr><td>Fluid restriction</td><td>Less free water in</td><td>Na⁺ rises slowly.</td></tr>
-        <tr><td>Loop diuretic</td><td>Urine Na⁺ about 70</td><td>Removes salt and more water: hypotonic loss.</td></tr>
-      </tbody></table>
-
-      <h3>Safety: sodium speed limits</h3>
-      <ul>
-        <li><b>Chronic hyponatremia</b> (over 48 h or unknown): raise Na⁺ no more than 8–10 mmol/L in 24 h, and no more than 8 if risk is high (Na⁺ ≤105, low K⁺, alcohol use, malnutrition, liver disease). Faster rises can cause osmotic demyelination days later.</li>
-        <li><b>Emergency: severe symptoms</b> (confusion, vomiting, seizures, coma) mean the brain is swelling. Call for specialist help at once. An experienced team decides and monitors treatment, because raising sodium too slowly or too fast can both injure the brain (see <a href="https://medlineplus.gov/ency/article/000775.htm" target="_blank" rel="noopener">osmotic demyelination syndrome</a>).</li>
-        <li><b>Watch for overshoot</b> when the cause of ADH release goes away: volume restored, cortisol replaced, thiazide or SSRI stopped. A water diuresis can raise Na⁺ fast; D5W or desmopressin can bring it back down.</li>
-        <li><b>Chronic hypernatremia:</b> lower Na⁺ no faster than 0.5 mmol/L per hour (10–12 mmol/L in 24 h). Faster lowering risks cerebral edema. Treat shock first.</li>
-        <li><b>HHS:</b> 0.9% saline first; a rising Na⁺ is expected as glucose falls. Aim for an osmolality fall of 3–8 mOsm/kg per hour.</li>
-        <li><b>Adrenal crisis:</b> hydrocortisone 100 mg IV at once, with 0.9% saline.</li>
-      </ul>
-
       <h3>The cases</h3>
-      <table className="reftable"><thead><tr><th>Case</th><th>Mechanism</th><th>Best first treatment</th><th>Safety</th><th>Learn more</th></tr></thead><tbody>
+      <table className="reftable"><thead><tr><th>Case</th><th>What happened</th><th>Learn more</th></tr></thead><tbody>
         {CASES.map((k, i) => {
-          const best = k.specialist ? 'Emergency: specialist management' : (Object.keys(FLUIDS) as FluidId[]).filter(f => k.grades[f]?.[0] === 'best').map(f => FLUIDS[f].name).join(' or ');
           const more = LEARN[k.id];
-          return <tr key={k.id}><td>{i + 1}. {k.title}</td><td>{k.causes.find(x => x.correct)?.text}</td><td>{best}</td><td>{k.safety}</td><td>{more && <a href={more.url} target="_blank" rel="noopener">{more.text}</a>}</td></tr>;
+          return <tr key={k.id}><td>{i + 1}. {k.title}</td><td>{k.debrief.what}</td><td>{more && <a href={more.url} target="_blank" rel="noopener">{more.text}</a>}</td></tr>;
         })}
       </tbody></table>
 
       <h3>Teaching model</h3>
-      <p>42 L total body water (ICF 28 L, ECF 14 L). Only Na⁺ salts and glucose are effective osmoles; ICF solute is fixed. Urine values are illustrative. Each treatment shows a single dose; real care rechecks Na⁺ every 2–6 h. This is a teaching tool, not a dosing guide.</p>
+      <p>42 L total body water (ICF 28 L, ECF 14 L). Only Na⁺ salts and glucose are effective osmoles; ICF solute is fixed. Urine values are illustrative. This is a teaching tool, not a guide to treatment.</p>
 
       <h3>Sources</h3>
       <ol className="sources">{SOURCES.map(x => <li key={x.url}><a href={x.url} target="_blank" rel="noopener">{x.text}</a></li>)}</ol>
@@ -265,12 +238,9 @@ export default function BedsideFlow() {
   const [icfChecked, setIcfChecked] = useState(false);
   const [water, setWater] = useState<'holding' | 'dumping'>();
   const [salt, setSalt] = useState<'holding' | 'losing'>();
-  const [cause, setCause] = useState<number>();
+  const [role, setRole] = useState<'homeostatic' | 'problem'>();
+  const [dangerPick, setDangerPick] = useState<Danger>();
   const [kidneyChecked, setKidneyChecked] = useState(false);
-  const [needEcf, setNeedEcf] = useState<Need>();
-  const [needCells, setNeedCells] = useState<Need>();
-  const [needChecked, setNeedChecked] = useState(false);
-  const [fluid, setFluid] = useState<FluidId>();
   const [result, setResult] = useState<Result>({});
   const [flash, setFlash] = useState(0);
   const [history, setHistory] = useState<Record<string, Result>>({});
@@ -302,13 +272,9 @@ export default function BedsideFlow() {
   }, [ci]);
   const cellTon = BASE.icfEff / BASE.icf;
 
-  const treated: State | null = fluid ? treat(truth, FLUIDS[fluid].event, c.adhUosm) : null;
-  const TL = treated ? labs(treated) : null;
-
   const reset = (i: number) => {
     setCi(i); setStep(0); setMaxStep(0); setVol(undefined); setTonGuess(undefined); setTonChecked(false); setIcfGuess(undefined); setIcfChecked(false);
-    setWater(undefined); setSalt(undefined); setCause(undefined); setKidneyChecked(false);
-    setNeedEcf(undefined); setNeedCells(undefined); setNeedChecked(false); setFluid(undefined); setResult({}); showShift('after'); setWhy(undefined); setOrder([]); setChainChecked(false);
+    setWater(undefined); setSalt(undefined); setRole(undefined); setKidneyChecked(false); setDangerPick(undefined); setResult({}); showShift('after'); setWhy(undefined); setOrder([]); setChainChecked(false);
   };
 
   const volOk = vol != null && (vol === c.volume || (c.volumeAlso ?? []).includes(vol));
@@ -320,12 +286,6 @@ export default function BedsideFlow() {
   const stage2 = { ecf: pre.ecf, icf: BASE.icf, ton: cellTon, ecfTon: pre.ton };
   const final = { ecf: truth.ecf, icf: truth.icf, ton: L.effOsm };
   const naLine: Line = { v: L.effOsm, text: `Na⁺ line ${f0(L.effOsm)}: both sides settle here`, kind: 'truth' };
-  const treatEv = fluid ? FLUIDS[fluid].event : null;
-  const tPre = treatEv ? (() => {
-    const ecf = Math.max(0.5, truth.ecf + treatEv.water);
-    return { ecf, ton: (truth.salt + truth.glu + (treatEv.salt ?? 0) + (treatEv.glu ?? 0)) / ecf };
-  })() : null;
-  const tDir: Snap = tPre ? dirOf(L.effOsm - tPre.ton, 1) : 0;
   let diag: React.ReactNode;
   if (step === 0 || (step === 1 && vol == null)) diag = <Diagram ecf={null} icf={BASE.icf} ton={null} />;
   // Volume first: until the sodium question is checked, the ECF changes width only.
@@ -337,12 +297,7 @@ export default function BedsideFlow() {
   else if (step === 3 && (!icfChecked || shift === 'before'))
     diag = <Diagram {...stage2} showOsm lines={[naLine]} arrow={icfChecked ? truthIcfDir : icfGuess ?? null} arrowGuess={!icfChecked} />;
   else if (step === 3) diag = <Diagram {...final} arrow={truthIcfDir} preEcf={truthIcfDir !== 0 ? pre : null} />;
-  else if (step === 5 && treated && TL && tPre) {
-    const ghost = { ecf: truth.ecf, icf: truth.icf, ton: L.effOsm };
-    diag = shift === 'before'
-      ? <Diagram ecf={tPre.ecf} icf={truth.icf} ton={L.effOsm} ecfTon={tPre.ton} showOsm ghost={ghost} arrow={tDir} />
-      : <Diagram ecf={treated.ecf} icf={treated.icf} ton={TL.effOsm} ghost={ghost} arrow={tDir === 0 ? null : tDir} preEcf={tDir !== 0 ? tPre : null} />;
-  } else diag = <Diagram {...final} />;
+  else diag = <Diagram {...final} />;
 
   const shiftControls = (first: string, before: React.ReactNode, after: React.ReactNode) => (
     <div className="shiftbox">
@@ -368,19 +323,18 @@ export default function BedsideFlow() {
     if (n === 1) setVol(undefined);
     if (n === 2) { setTonGuess(undefined); setTonChecked(false); }
     if (n === 3) { setIcfGuess(undefined); setWhy(undefined); setIcfChecked(false); showShift('after'); }
-    if (n === 4) { setWater(undefined); setSalt(undefined); setCause(undefined); setKidneyChecked(false); }
-    if (n === 5) { setNeedEcf(undefined); setNeedCells(undefined); setNeedChecked(false); setFluid(undefined); }
+    if (n === 0) setDangerPick(undefined);
+    if (n === 4) { setWater(undefined); setSalt(undefined); setRole(undefined); setKidneyChecked(false); }
   };
   const resetBtn = (n: number) => (
     <button className="linkbtn" onClick={() => redo(n)} title="Clear your answer to this step and try again. Your first answer is still the one scored.">Reset this step</button>
   );
-  const answered = [true, vol != null, tonChecked, icfChecked, kidneyChecked, c.specialist || needChecked][step] ?? false;
-  const finish = () => { setHistory(h => ({ ...h, [c.id]: result })); go(6); };
+  const answered = [dangerPick != null, vol != null, tonChecked, icfChecked, kidneyChecked, chainChecked][step] ?? false;
 
   const scoreOf = (r: Result) => {
-    const keys: (keyof Result)[] = c.specialist ? ['vol', 'osm', 'icf', 'why', 'water', 'salt', 'cause', 'chain'] : ['vol', 'osm', 'icf', 'why', 'water', 'salt', 'cause', 'chain', 'ecfNeed', 'cellNeed'];
-    const pts = keys.filter(k => r[k] === true).length + (c.specialist ? 0 : r.fluid === 'best' ? 1 : r.fluid === 'ok' ? 0.5 : 0);
-    return { pts, of: c.specialist ? 8 : 11 };
+    const keys: (keyof Result)[] = ['danger', 'vol', 'osm', 'icf', 'why', 'water', 'salt', 'role', 'chain'];
+    const pts = keys.filter(k => r[k] === true).length;
+    return { pts, of: keys.length };
   };
 
   return (
@@ -441,11 +395,6 @@ export default function BedsideFlow() {
               <span className="v">U<sub>osm</sub> {c.urine.osm}</span>
               <span className="v">U<sub>Na</sub> {c.urine.na}</span>
               {c.urine.extra && <span>{c.urine.extra}</span>}
-              {kidneyChecked && cause != null && <span className="you">You: {c.causes[cause].text}</span>}
-            </dd></div>}
-            {fluid && TL && <div><dt>Rx</dt><dd>
-              <span className="you">{FLUIDS[fluid].name}</span>
-              <span className="v">Na⁺ {labNa} → {f0(TL.na)}</span>
             </dd></div>}
           </dl>
 
@@ -454,7 +403,7 @@ export default function BedsideFlow() {
             <span className="spacer" />
             {maxStep > 0 && <button className="linkbtn" onClick={() => reset(ci)}>Restart case</button>}
           </div>
-          {step >= 1 && step <= 5 && answered && maxStep > step && <p className="hint">Reviewing an earlier step. Only your first answer is scored.</p>}
+          {step <= 5 && answered && maxStep > step && <p className="hint">Reviewing an earlier step. Only your first answer is scored.</p>}
 
           {step === 0 && (
             <div className="stepbox">
@@ -465,7 +414,14 @@ export default function BedsideFlow() {
                 <div><span className="k">Circulation</span><span>{c.danger.circulation}</span></div>
               </div>
               <p className="hint">The brain tells you about cell volume (tonicity). The circulation tells you about the ECF.</p>
-              <button className="primary" onClick={() => go(1)}>Examine the patient</button>
+              <p className="q">What is in danger?</p>
+              <Choice label="Danger" value={dangerPick} disabled={dangerPick != null}
+                options={[{ v: 'brain' as Danger, text: 'Brain' }, { v: 'circulation' as Danger, text: 'Circulation' }, { v: 'both' as Danger, text: 'Both' }, { v: 'neither' as Danger, text: 'Neither' }]}
+                onPick={v => { setDangerPick(v); record({ danger: v === c.dangerKey || (c.dangerAlso ?? []).includes(v) }); }} />
+              {dangerPick != null && <>
+                <Verdict ok={dangerPick === c.dangerKey || (c.dangerAlso ?? []).includes(dangerPick)}>{c.dangerNote}</Verdict>
+                <div className="row"><button className="primary" onClick={() => go(1)}>Examine the patient</button>{resetBtn(0)}</div>
+              </>}
             </div>
           )}
 
@@ -523,86 +479,25 @@ export default function BedsideFlow() {
               <p className="q">Salt</p>
               <Choice label="Salt" value={salt} disabled={kidneyChecked}
                 options={[{ v: 'holding' as const, text: 'Holding salt' }, { v: 'losing' as const, text: 'Losing salt' }]} onPick={setSalt} />
-              <p className="q">So the mechanism is…</p>
-              <div className="causes" role="group" aria-label="Mechanism">
-                {c.causes.map((k, i) => (
-                  <button key={k.text} aria-pressed={cause === i} disabled={kidneyChecked} onClick={() => setCause(i)}
-                    className={kidneyChecked && k.correct ? 'right' : ''}>{k.text}</button>
-                ))}
-              </div>
-              {!kidneyChecked && <button className="primary" disabled={water == null || salt == null || cause == null}
-                onClick={() => { setKidneyChecked(true); record({ water: water === c.water, salt: salt === c.salt, cause: !!c.causes[cause!].correct }); }}>Check</button>}
+              <p className="q">Is the kidney's response homeostatic, or part of the problem?</p>
+              <Choice label="Kidney's role" value={role} disabled={kidneyChecked}
+                options={[{ v: 'homeostatic' as const, text: 'Homeostatic: responding to what it senses' }, { v: 'problem' as const, text: 'Part of the problem' }]} onPick={setRole} />
+              {!kidneyChecked && <button className="primary" disabled={water == null || salt == null || role == null}
+                onClick={() => { setKidneyChecked(true); record({ water: water === c.water, salt: salt === c.salt, role: role === c.kidneyRole }); }}>Check</button>}
               {kidneyChecked && <>
                 <Verdict ok={water === c.water && salt === c.salt ? true : water === c.water || salt === c.salt ? 'ok' : false}>{c.kidneyNote}</Verdict>
-                <Verdict ok={!!c.causes[cause!].correct}>{c.causeNote}</Verdict>
-                <div className="row"><button className="primary" onClick={() => go(5)}>Treat</button>{resetBtn(4)}</div>
+                <Verdict ok={role === c.kidneyRole}>{c.roleNote}</Verdict>
+                <div className="row"><button className="primary" onClick={() => go(5)}>Put the story together</button>{resetBtn(4)}</div>
               </>}
             </div>
           )}
 
-          {step === 5 && c.specialist && (
-            <div className="stepbox">
-              <h3>6 · Treatment: specialist management</h3>
-              <div className="verdict bad"><b>Emergency.</b> {c.safety}</div>
-              <p className="q">Why it needs a specialist</p>
-              <ul className="findings">
-                <li><b>Left untreated:</b> brain swelling can progress to seizures, coma, brain herniation and death.</li>
-                <li><b>Corrected too fast:</b> in hyponatremia that has lasted more than 48 hours, a rapid rise in Na⁺ can cause osmotic demyelination, a permanent brain injury that appears days later.</li>
-                <li><b>Corrected too slowly:</b> the swelling continues.</li>
-              </ul>
-              <p className="hint">This case has no treatment choice. <a href="https://medlineplus.gov/ency/article/000394.htm" target="_blank" rel="noopener">Learn more: low blood sodium</a></p>
-              <button className="primary" onClick={finish}>Finish case</button>
-            </div>
-          )}
-
-          {step === 5 && !c.specialist && (
-            <div className="stepbox">
-              <h3>6 · Where do you want salt and water?</h3>
-              <p className="q">The ECF needs…</p>
-              <Choice label="ECF need" value={needEcf} disabled={needChecked}
-                options={(['in', 'none', 'out'] as Need[]).map(v => ({ v, text: NEED_TEXT.ecf[v] }))} onPick={setNeedEcf} />
-              <p className="q">The cells need…</p>
-              <Choice label="Cell need" value={needCells} disabled={needChecked}
-                options={(['in', 'none', 'out'] as Need[]).map(v => ({ v, text: NEED_TEXT.cells[v] }))} onPick={setNeedCells} />
-              {!needChecked && <button className="primary" disabled={needEcf == null || needCells == null}
-                onClick={() => { setNeedChecked(true); record({ ecfNeed: needEcf === c.needEcf, cellNeed: needCells === c.needCells }); }}>Check</button>}
-              {needChecked && <>
-                <Verdict ok={needEcf === c.needEcf && needCells === c.needCells ? true : needEcf === c.needEcf || needCells === c.needCells ? 'ok' : false}>{c.needNote}</Verdict>
-                {!fluid && resetBtn(5)}
-                <p className="q">Now pick what to give. Watch where it goes.</p>
-                <p className="hint">Sodium speed limits: in chronic hyponatremia raise Na⁺ no more than 8–10 mmol/L in 24 h (risk: osmotic demyelination). In chronic hypernatremia lower it no more than 10–12 mmol/L in 24 h (risk: cerebral edema). The diagram shows one dose; real care rechecks Na⁺ every 2–6 h.</p>
-                <div className="fluids" role="group" aria-label="Treatment">
-                  {(Object.keys(FLUIDS) as FluidId[]).map(f => (
-                    <button key={f} aria-pressed={fluid === f} onClick={() => { setFluid(f); playShift(); if (result.fluid == null) record({ fluid: c.grades[f]?.[0] }); }}>
-                      <b>{FLUIDS[f].name}</b><span>{FLUIDS[f].detail}</span>
-                    </button>
-                  ))}
-                </div>
-                {fluid && TL && <>
-                  <div className="labs">
-                    <div><span>Na⁺</span><b>{labNa} → {f0(TL.na)}</b></div>
-                    <div><span>ECF</span><b>{f1(truth.ecf)} → {f1(treated!.ecf)} L</b></div>
-                    <div><span>ICF</span><b>{f1(truth.icf)} → {f1(treated!.icf)} L</b></div>
-                  </div>
-                  {tPre && shiftControls('1 · Fluid reaches the ECF',
-                    tDir === 0 ? <>The fluid lands in the ECF at {f0(tPre.ton)}, the same as the cells ({f0(L.effOsm)}). No gradient, so no water moves.</>
-                      : <>The fluid lands in the ECF first: ECF {f0(tPre.ton)}, cells {f0(L.effOsm)}. Water moves toward the higher osmolality: {tDir > 0 ? 'into the cells' : 'out of the cells'}.</>,
-                    <>After the shift both sides are {f0(TL.effOsm)}. Dotted blue = before treatment.</>)}
-                  <Verdict ok={c.grades[fluid]![0] === 'best' ? true : c.grades[fluid]![0] === 'ok' ? 'ok' : false}>{c.grades[fluid]![1]}</Verdict>
-                  <div className="verdict meh"><b>Safety.</b> {c.safety}</div>
-                  <p className="hint">Outline = before treatment. Try other options to compare; only your first choice is scored.</p>
-                  <div className="row"><button className="primary" onClick={finish}>Finish case</button>{resetBtn(5)}</div>
-                </>}
-              </>}
-            </div>
-          )}
-
-          {step === 6 && (() => {
+          {step === 5 && (() => {
             const s = scoreOf(result);
             const done = Object.keys({ ...history, [c.id]: result }).length;
             return (
               <div className="stepbox">
-                <h3>Case complete</h3>
+                <h3>6 · Put the story together</h3>
                 <div className="chainbox">
                   <p className="q">Put the story in order: tap the links from first cause to what you see at the bedside.</p>
                   <ol className="chainlist">
@@ -625,7 +520,7 @@ export default function BedsideFlow() {
                       onClick={() => {
                         const ok = order.every((k, i) => k === i);
                         setChainChecked(true); record({ chain: ok });
-                        setHistory(h => ({ ...h, [c.id]: { ...h[c.id], chain: h[c.id]?.chain ?? ok } }));
+                        setHistory(h => ({ ...h, [c.id]: { ...result, chain: result.chain ?? ok } }));
                       }}>Check</button>
                     <button className="linkbtn" disabled={!order.length} onClick={() => setOrder(o => o.slice(0, -1))}>Undo</button>
                     <button className="linkbtn" disabled={!order.length} onClick={() => setOrder([])}>Clear</button>
@@ -633,24 +528,35 @@ export default function BedsideFlow() {
                   {chainChecked && <Verdict ok={order.every((k, i) => k === i)}>{order.every((k, i) => k === i)
                     ? 'Each link causes the next.' : 'Read the corrected chain: each link causes the next.'}</Verdict>}
                 </div>
+                {chainChecked && <>
+                <div className="debrief">
+                  <h3>Debrief: {c.title}</h3>
+                  <dl>
+                    <div><dt>Who</dt><dd>{c.debrief.who}</dd></div>
+                    <div><dt>What happened</dt><dd>{c.debrief.what}</dd></div>
+                    <div><dt>Key findings</dt><dd>{c.debrief.findings}</dd></div>
+                    <div><dt>Danger</dt><dd>{c.debrief.danger}</dd></div>
+                  </dl>
+                  {LEARN[c.id] && <p className="hint">Learn more: <a href={LEARN[c.id].url} target="_blank" rel="noopener">{LEARN[c.id].text}</a> (MedlinePlus)</p>}
+                </div>
                 <div className="scorebig mono">{s.pts} / {s.of}</div>
                 <ul className="tally">
+                  <li className={result.danger ? 'y' : 'n'}>Danger</li>
                   <li className={result.vol ? 'y' : 'n'}>Wet or dry</li>
                   <li className={result.osm ? 'y' : 'n'}>Tonicity line</li>
                   <li className={result.icf ? 'y' : 'n'}>Cells</li>
                   <li className={result.why ? 'y' : 'n'}>Cells: reason</li>
                   <li className={result.water ? 'y' : 'n'}>Kidney: water</li>
                   <li className={result.salt ? 'y' : 'n'}>Kidney: salt</li>
-                  <li className={result.cause ? 'y' : 'n'}>Mechanism</li>
+                  <li className={result.role ? 'y' : 'n'}>Kidney: homeostatic or problem</li>
                   <li className={result.chain ? 'y' : result.chain === false ? 'n' : ''}>Causal chain</li>
-                  {!c.specialist && <li className={result.ecfNeed && result.cellNeed ? 'y' : 'n'}>Where salt and water go</li>}
-                  {!c.specialist && <li className={result.fluid === 'best' ? 'y' : result.fluid === 'ok' ? 'm' : 'n'}>First treatment</li>}
                 </ul>
                 <p className="hint">{done} of {CASES.length} cases done.</p>
                 <div className="row">
                   {ci < CASES.length - 1 && <button className="primary" onClick={() => reset(ci + 1)}>Next case</button>}
                   <a className="ghostbtn" href={CARD_URL}>Post-activity: Darrow–Yannet, read backward</a>
                 </div>
+                </>}
               </div>
             );
           })()}
@@ -670,7 +576,6 @@ export default function BedsideFlow() {
             <span><i className="sw icf" />ICF (cells)</span>
             <span><i className="sw ecf" />ECF</span>
             <span><i className="sw normal" />normal</span>
-            {treated && <span><i className="sw ghost" />before treatment</span>}
           </div>
           </div>
 

@@ -12,4 +12,6 @@ It also used fixed 75/25 volume splits rather than mass balance.
 
 `bedside-2026-11-06/` is the bedside activity as it was before the staged water-shift changes of 6 Nov 2026 (ECF changes first, then water moves; two-stage treatment; phone layout). Open its `index.html` locally to run it.
 
+`bedside-2026-11-06-treatment/` is the version with treatment, the mechanism question and the reason question, replaced the same evening by the version without treatment.
+
 Nothing in `archive/` is published to GitHub Pages (see `_config.yml`).

@@ -1,6 +1,7 @@
 import { Event, fluid } from './engine';
 
 export type Vol = 'dry' | 'euvolemic' | 'wet';
+export type Danger = 'brain' | 'circulation' | 'both' | 'neither';
 export type Need = 'in' | 'none' | 'out';
 export type Grade = 'best' | 'ok' | 'harmful';
 export type FluidId = 'ns' | 'lr' | 'd5w' | 'hts' | 'restrict' | 'loop';
@@ -32,6 +33,12 @@ export type Case = {
   causeNote: string;
   // The causal chain, in order, for the end-of-case ordering task
   chain: string[];
+  // Danger step: which system is threatened
+  dangerKey: Danger; dangerAlso?: Danger[]; dangerNote: string;
+  // Kidney step: is the kidney's response homeostatic, or part of the problem?
+  kidneyRole: 'homeostatic' | 'problem'; roleNote: string;
+  // End-of-case debrief (illness script)
+  debrief: { who: string; what: string; findings: string; danger: string };
   needEcf: Need; needCells: Need; needNote: string;
   // Kidney keeps excreting salt at this urine osmolality after treatment (ADH stays on)
   adhUosm?: number;
@@ -57,6 +64,9 @@ export const CASES: Case[] = [
     causes: [{ text: 'Diuretic use' }, { text: 'Adrenal insufficiency' }, { text: 'Isotonic GI fluid loss', correct: true }, { text: 'SIADH' }],
     causeNote: 'An appropriate kidney response points away from the kidney: the loss is from the gut.',
     chain: ['Isotonic fluid is lost from the gut', 'ECF volume falls; its osmolality is unchanged', 'No gradient, so no water crosses the cell membrane', 'The whole deficit is in the ECF: light-headed on standing'],
+    dangerKey: 'circulation', dangerNote: "Fast pulse, low BP and orthostatic changes: the circulation is in danger. Alert and oriented, so the brain is fine.",
+    kidneyRole: 'homeostatic', roleNote: "Holding salt and water is exactly what a dry ECF needs. The kidney is responding, not causing.",
+    debrief: { who: "Young adult with diarrhea after travel.", what: "Stool is roughly isotonic, so salt and water left the ECF together. Tonicity did not change, so no water crossed into or out of cells.", findings: "Orthostatic, flat neck veins, dry mucosa; normal Na⁺, high Hct; concentrated urine with low Na⁺.", danger: "Circulation: a shrinking ECF can progress to shock." },
     needEcf: 'in', needCells: 'none', needNote: 'Fill the ECF; the cells are fine, so give fluid that does not change tonicity.',
     safety: 'Na⁺ is normal, so there is no sodium speed limit here. Reassess volume after each bolus and check K⁺ and HCO₃⁻, which diarrhea also depletes.',
     grades: {
@@ -82,6 +92,9 @@ export const CASES: Case[] = [
     causes: [{ text: 'Sweat salt loss alone' }, { text: 'Overdrinking with ADH still on', correct: true }, { text: 'Heart failure' }, { text: 'Diabetes insipidus' }],
     causeNote: 'Sweat lost some salt, but the large free-water gain with ADH on is what dropped Na⁺.',
     chain: ['Sweat loses salt and water during the race', 'Large free-water intake while ADH is on', 'ECF osmolality falls below the cells', 'Water moves into the cells', 'Brain cells swell: confusion and vomiting'],
+    dangerKey: 'brain', dangerNote: "Confused and vomiting with a normal BP: the brain is in danger (cells swelling). The circulation is fine.",
+    kidneyRole: 'problem', roleNote: "Urine osm 450 with Na⁺ 131: ADH is still on (exercise, nausea, stress), so the kidney keeps water it should be getting rid of. It is part of the problem.",
+    debrief: { who: "Endurance athlete who drank water at every station.", what: "Sweat lost salt and water. Drinking replaced it with more free water than was lost, while ADH stayed on and the kidney kept it. ECF tonicity fell and water moved into cells.", findings: "Confusion, vomiting, headache, weight up; Na⁺ 131; concentrated urine.", danger: "Brain swelling (exercise-associated hyponatremia). An emergency: recognize it, stop further water and call for help. An experienced team corrects the sodium, because too slow or too fast both injure the brain." },
     needEcf: 'none', needCells: 'out', needNote: 'Volume is about right. Brain cells are swollen, so water has to come out of them.',
     adhUosm: 450,
     specialist: true,
@@ -109,6 +122,9 @@ export const CASES: Case[] = [
     causes: [{ text: 'Hypovolemia' }, { text: 'Adrenal insufficiency' }, { text: 'Psychogenic polydipsia' }, { text: 'SIADH (tumor-secreted ADH)', correct: true }],
     causeNote: 'Euvolemic, concentrated urine, urine Na⁺ over 20, and a lung mass: SIADH. Polydipsia would make dilute urine.',
     chain: ['The lung tumor secretes ADH', 'The kidney keeps free water', 'ECF osmolality falls below the cells', 'Water moves into the cells', 'Na⁺ is low but the patient looks euvolemic'],
+    dangerKey: 'neither', dangerNote: "Stable vitals and only mild nausea: no immediate danger to the brain or the circulation. The low Na⁺ still matters.",
+    kidneyRole: 'problem', roleNote: "Concentrated urine despite a low Na⁺ and a normal volume: ADH is on with no reason to be. The kidney is following inappropriate ADH.",
+    debrief: { who: "Older smoker with a new lung mass.", what: "The tumor secretes ADH, so the kidney keeps free water. About two-thirds of that water moves into cells, so the patient looks euvolemic while Na⁺ falls.", findings: "Euvolemic; Na⁺ 129; urine osm 600 and urine Na⁺ 50.", danger: "Mild now. If Na⁺ falls further or faster, brain swelling follows." },
     needEcf: 'none', needCells: 'out', needNote: 'Volume is fine. The cells hold excess water.',
     adhUosm: 600,
     safety: 'Chronic hyponatremia: raise Na⁺ no more than 8–10 mmol/L in 24 h, and no more than 8 if osmotic demyelination risk is high (Na⁺ ≤105, low K⁺, alcohol use, malnutrition, liver disease). Too fast a rise can cause osmotic demyelination days later. Check Na⁺ every 4–6 h; D5W or desmopressin can bring an overshoot back down.',
@@ -135,6 +151,9 @@ export const CASES: Case[] = [
     causes: [{ text: 'Low effective arterial volume (heart failure)', correct: true }, { text: 'SIADH' }, { text: 'Isotonic saline overload' }, { text: 'Adrenal insufficiency' }],
     causeNote: 'Wet, with urine Na⁺ under 20: the kidney thinks the circulation is underfilled. That is effective arterial volume, not total ECF.',
     chain: ['The weak heart underfills the arteries', 'The kidney senses low perfusion and holds salt and water', 'ECF expands and its osmolality falls', 'Water moves into the cells', 'Edema and breathlessness, with a low Na⁺'],
+    dangerKey: 'circulation', dangerNote: "Breathless lying flat, cool hands and a low-normal BP: the circulation is failing (overloaded lungs, poor forward flow). Alert, so the brain is fine.",
+    kidneyRole: 'homeostatic', roleNote: "Holding salt and water is the kidney’s normal response to low perfusion. It is responding correctly to what it senses (underfilled arteries), even though the ECF is already too big.",
+    debrief: { who: "Older adult with known heart failure.", what: "The weak heart underfills the arteries. The kidney senses low perfusion and holds salt and, through ADH, extra water. The ECF expands (edema), tonicity falls slightly and some water moves into cells.", findings: "Raised JVP, crackles, edema, weight up; Na⁺ 133; urine Na⁺ 8.", danger: "Circulation: fluid in the lungs and poor forward flow." },
     needEcf: 'out', needCells: 'out', needNote: 'Remove ECF (salt and water), and more water than salt to bring tonicity up.',
     safety: 'Check K⁺, Mg²⁺ and creatinine during diuresis. Fluid restriction helps the Na⁺. Keep the Na⁺ rise within 8–10 mmol/L in 24 h; diuresis rarely overshoots, but vaptans can.',
     grades: {
@@ -160,6 +179,9 @@ export const CASES: Case[] = [
     causes: [{ text: 'Diarrhea' }, { text: 'Adrenal insufficiency (no aldosterone)', correct: true }, { text: 'SIADH' }, { text: 'Heart failure' }],
     causeNote: 'A dry patient losing salt in the urine means the kidney is the problem. Diuretics also do this; the history and skin point to Addison’s.',
     chain: ['No aldosterone', 'The kidney loses salt faster than water', 'ECF shrinks and its osmolality falls', 'Water moves into the cells', 'Dizzy and dry, yet Na⁺ is low'],
+    dangerKey: 'circulation', dangerNote: "BP 88/54 and faint on standing: the circulation is in danger. Tired but oriented.",
+    kidneyRole: 'problem', roleNote: "Urine Na⁺ 60 in a dry patient: the kidney is losing salt when it should be holding it. Without aldosterone it cannot hold it.",
+    debrief: { who: "Adult with months of fatigue, weight loss, salt craving and darker skin.", what: "Without aldosterone the kidney wastes salt and the ECF shrinks. The volume loss turns ADH on, so water is kept and tonicity falls; water moves into cells.", findings: "Hypotension, orthostatic, dry; Na⁺ 130, high Hct; urine Na⁺ 60; darker skin creases.", danger: "Circulation: adrenal crisis can cause shock. An emergency." },
     needEcf: 'in', needCells: 'out', needNote: 'Fill the ECF with salt. Restoring tonicity will draw water back out of the cells.',
     safety: 'Give hydrocortisone 100 mg IV at once; do not wait for test results. Overshoot risk: once volume and cortisol are restored, ADH switches off and a water diuresis can raise Na⁺ too fast. Check Na⁺ every 2–4 h and keep the rise within 8–10 mmol/L in 24 h. If it rises faster, D5W or desmopressin can bring it back down.',
     grades: {
@@ -185,6 +207,9 @@ export const CASES: Case[] = [
     causes: [{ text: 'Diabetes insipidus' }, { text: 'Salt ingestion' }, { text: 'Osmotic diuresis' }, { text: 'Not drinking (no access to water)', correct: true }],
     causeNote: 'The kidney is doing everything right; the problem is intake. DI would make dilute urine.',
     chain: ['No water intake through a heat wave', 'The ECF loses free water; its osmolality rises above the cells', 'Water moves out of the cells', 'Brain cells shrink: drowsiness'],
+    dangerKey: 'both', dangerNote: "Drowsy and confused (brain) and orthostatic (circulation): both are in danger.",
+    kidneyRole: 'homeostatic', roleNote: "Very concentrated urine with low Na⁺: the kidney is holding every drop of water and salt. It is doing its job; the problem is intake.",
+    debrief: { who: "Frail older adult with dementia, alone through a heat wave.", what: "Water kept being lost but none was drunk. The ECF lost free water, tonicity rose and water left the cells.", findings: "Drowsy, very dry, orthostatic; Na⁺ 155; urine osm 900.", danger: "Brain cells shrinking, and a low circulating volume." },
     needEcf: 'in', needCells: 'in', needNote: 'Mostly cells need water back; the ECF needs a little.',
     safety: 'Treat shock first with saline. Then lower Na⁺ no faster than 0.5 mmol/L per hour (10–12 mmol/L in 24 h) when the hypernatremia is chronic or of unknown duration; faster lowering risks cerebral edema. Check Na⁺ every 2–4 h.',
     grades: {
@@ -210,6 +235,9 @@ export const CASES: Case[] = [
     causes: [{ text: 'Not drinking alone' }, { text: 'Osmotic diuresis' }, { text: 'Nephrogenic diabetes insipidus (lithium)', correct: true }, { text: 'SIADH' }],
     causeNote: 'High Na⁺ with dilute urine means the kidney is losing water. Lithium blocks ADH’s effect.',
     chain: ["Lithium blocks ADH's action in the kidney", 'The kidney passes large volumes of dilute urine', 'No water overnight: ECF osmolality rises above the cells', 'Water moves out of the cells', 'Cells shrink; Na⁺ is high'],
+    dangerKey: 'brain', dangerAlso: ["both"], dangerNote: "Irritable and confused: the brain is in danger. BP is normal and only mildly orthostatic, so the circulation is less of a concern (both is acceptable).",
+    kidneyRole: 'problem', roleNote: "Dilute urine (osm 90) with Na⁺ 153: the kidney is getting rid of water it should be holding. Lithium blocks ADH’s action.",
+    debrief: { who: "Adult on lithium for years.", what: "Lithium makes the kidney resistant to ADH (nephrogenic diabetes insipidus). Thirst kept up with the water loss until there was no water overnight; tonicity rose and water left the cells.", findings: "Large urine volumes, thirst, confusion; Na⁺ 153; urine osm 90.", danger: "Brain cells shrinking. It worsens fast whenever the patient cannot drink." },
     needEcf: 'none', needCells: 'in', needNote: 'The cells need water back; volume is close to normal.',
     safety: 'Lower Na⁺ no more than 10–12 mmol/L in 24 h if it is chronic. Large volumes of D5W can cause hyperglycemia, which drives more urine loss; oral water is preferred if the patient can drink. Review lithium with the prescriber, as nephrogenic DI can persist after it is stopped.',
     grades: {
@@ -235,6 +263,9 @@ export const CASES: Case[] = [
     causes: [{ text: 'Osmotic diuresis from hyperglycemia', correct: true }, { text: 'SIADH' }, { text: 'Diabetes insipidus' }, { text: 'Diarrhea' }],
     causeNote: 'Glucose in the urine carries water and salt with it, so the kidney cannot hold either.',
     chain: ['Glucose builds up in the ECF', 'ECF osmolality rises above the cells', 'Water moves out of the cells, diluting Na⁺', 'Brain cells shrink: drowsiness'],
+    dangerKey: 'both', dangerNote: "Drowsy (brain) with a low BP and orthostasis (circulation): both are in danger.",
+    kidneyRole: 'problem', roleNote: "Glucose in the urine drags water and salt out with it (osmotic diuresis). The kidney cannot hold either, so its losses are part of the problem.",
+    debrief: { who: "Older adult with type 2 diabetes.", what: "Glucose builds up in the ECF and raises tonicity, pulling water out of cells and diluting Na⁺. Glucose spilling into the urine carries water and salt out, shrinking the ECF further.", findings: "Glucose 1135; Na⁺ 133 but tonicity high; dry, orthostatic; urine glucose 4+.", danger: "Brain cells shrinking (drowsiness) and a low circulating volume." },
     needEcf: 'in', needCells: 'in', needNote: 'Fill the ECF first. The cells need water too, but fixing glucose with insulin will move water back into them.',
     safety: 'Use 0.9% saline first. Na⁺ will rise as glucose falls; that is expected. Track osmolality and aim for a fall of 3–8 mOsm/kg per hour, with glucose falling 4–6 mmol/L (72–108 mg/dL) per hour. Once corrected for glucose, Na⁺ should fall no more than 10 mmol/L in 24 h. Guidelines differ on when to start insulin; low-dose insulin usually follows fluids. Replace K⁺.',
     grades: {

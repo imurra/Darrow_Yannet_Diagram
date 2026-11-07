@@ -1,0 +1,27 @@
+# Darrow–Yannet at the Bedside
+
+Interactive case activity that follows the bedside order:
+1. Danger (brain, circulation)
+2. Wet or dry (exam → ECF volume). The fluid lands in the ECF first; the diagram changes ECF width only.
+3. Where does sodium put the tonicity line? (glucose included; scored). After Check, the ECF takes its new height while the cells stay at 285.
+4. Predict the cells from that gradient (water in, out or no shift; drawn as an arrow) and say why (ECF lower, higher or equal to the cells; scored separately). After Check, water moves until both sides meet the line; a dotted outline keeps the ECF as it was before water moved.
+5. Read the kidney (urine osm and Na⁺ → cause)
+6. Treatment (where salt and water should go, then a fluid). Each fluid plays two stages: it lands in the ECF, then water shifts.
+
+At the end of each case, students tap the causal chain into order, from first cause to bedside finding (`chain` in `cases.ts`; scored).
+
+Each step has a Reset button; only the first answer is scored. Every treatment shows guideline-based safety advice (sodium correction limits, osmotic demyelination, overshoot). A Reference tab holds the diagram key, the six states, the kidney's vote, fluids, safety limits, all cases and sources. `card.html` is the printable post-activity card ("Darrow–Yannet, read backward").
+
+8 cases: diarrhea, marathon runner, SIADH, heart failure, Addison's, elderly dehydration, lithium DI, hyperglycemia.
+
+`index.html` is self-contained and works offline: open it in a browser or host it with GitHub Pages.
+
+## Source
+- `src/engine.ts` — mass-balance model (salt, glucose, urea; ICF solute fixed)
+- `src/cases.ts` — case library, expected answers and treatment grades
+- `src/BedsideFlow.tsx` — React interface
+- `src/styles.css` — styles (light and dark)
+
+Teaching model: 42 L body water, effective osmoles only; urine values are illustrative.
+
+© 2026 Ian V. J. Murray · CC BY-NC-SA 4.0
