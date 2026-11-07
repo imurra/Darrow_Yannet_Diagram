@@ -3,7 +3,7 @@
 Interactive case activity that follows the bedside order:
 1. Danger: brain, circulation, both or neither?
 2. Wet or dry (exam → ECF volume). The fluid lands in the ECF first; the diagram changes ECF width only.
-3. Where does sodium put the tonicity line? (glucose included). After Check, the ECF takes its new height while the cells stay at 285.
+3. Is sodium low, normal or high? (very high glucose flagged; the feedback explains it). After Check, the ECF takes its new height while the cells stay at 285.
 4. Predict the cells from that gradient (water in, out or no shift; drawn as an arrow) and say why. After Check, water moves until both sides meet the line.
 5. Read the kidney: holding or losing water and salt, and is that response homeostatic or part of the problem?
 6. Put the story together: tap the causal chain into order, then read the debrief (illness script).

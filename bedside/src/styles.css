@@ -226,3 +226,4 @@ button.ghostbtn { background: transparent; cursor: pointer; font: inherit; font-
 .extramenu .hint { margin: 0 0 4px; }
 @media (max-width: 720px) { .extramenu { left: 0; right: auto; } }
 .extramenu .ghostbtn.small { text-align: left; justify-content: flex-start; }
+.flag { color: var(--bad); font-weight: 700; }

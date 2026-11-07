@@ -10,6 +10,7 @@ import { CASES, Danger, Vol } from './cases';
 const CARD_URL = 'card.html';
 const STEPS = ['Danger', 'Wet or dry', 'Sodium', 'Cells', 'Kidney', 'Debrief'];
 const NORMAL_TON = 285;
+const DIRWORD: Record<-1 | 0 | 1, string> = { [-1]: 'low', 0: 'normal', 1: 'high' };
 // Core cases come first in CASES; the rest are optional extra practice.
 const CORE = CASES.filter(k => !k.optional).length;
 const caseLabel = (i: number) => i < CORE
@@ -195,7 +196,7 @@ function Reference({ onClose }: { onClose: () => void }) {
       <ol>
         <li><b>Danger.</b> Brain, circulation, both or neither? The brain reports on cell volume (tonicity); the circulation reports on the ECF.</li>
         <li><b>Wet or dry.</b> Orthostatics, JVP, edema, mucous membranes and weight tell you what the ECF is doing.</li>
-        <li><b>Sodium.</b> Na⁺ and glucose set the tonicity line: above, at or below 285.</li>
+        <li><b>Sodium.</b> Is Na⁺ low, normal or high? Na⁺ sets the tonicity line (very high glucose also raises it).</li>
         <li><b>Cells.</b> Water follows tonicity: in, out or no shift.</li>
         <li><b>Kidney.</b> Urine osmolality and urine Na⁺ show whether the kidney is holding or losing water and salt, and whether that response is homeostatic or part of the problem.</li>
         <li><b>Put the story together.</b> Order the causal chain, then read the debrief.</li>
@@ -285,13 +286,14 @@ export default function BedsideFlow() {
 
   const volOk = vol != null && (vol === c.volume || (c.volumeAlso ?? []).includes(vol));
   const truthTonDir = dirOf(L.effOsm - NORMAL_TON, 5);
+  const naDir: Snap = labNa < 135 ? -1 : labNa > 145 ? 1 : 0;
 
   // What the diagram shows at each step
   // What the diagram shows at each step. The case's fluid lands in the ECF first (stage 2);
   // water then crosses the membrane until both sides match (stage 3).
   const stage2 = { ecf: pre.ecf, icf: BASE.icf, ton: cellTon, ecfTon: pre.ton };
   const final = { ecf: truth.ecf, icf: truth.icf, ton: L.effOsm };
-  const naLine: Line = { v: L.effOsm, text: `Na⁺ line ${f0(L.effOsm)}: both sides settle here`, kind: 'truth' };
+  const naLine: Line = { v: L.effOsm, text: `Tonicity ${f0(L.effOsm)}: both sides settle here`, kind: 'truth' };
   let diag: React.ReactNode;
   if (step === 0 || (step === 1 && vol == null)) diag = <Diagram ecf={null} icf={BASE.icf} ton={null} />;
   // Volume first: until the sodium question is checked, the ECF changes width only.
@@ -299,7 +301,7 @@ export default function BedsideFlow() {
     lines={step === 2 && tonGuess != null ? [{ v: TON_SNAPS[tonGuess], text: 'your line', kind: 'pred' }] : []} />;
   else if (step === 2) diag = <Diagram {...stage2} showOsm={tonChecked}
     lines={!tonChecked ? (tonGuess != null ? [{ v: TON_SNAPS[tonGuess], text: 'your line', kind: 'pred' }] : [])
-      : [naLine, ...(tonGuess != null && tonGuess !== truthTonDir ? [{ v: TON_SNAPS[tonGuess], text: 'your prediction', kind: 'wrong' } as Line] : [])]} />;
+      : [naLine, ...(tonGuess != null && tonGuess !== truthTonDir ? [{ v: TON_SNAPS[tonGuess], text: tonGuess === naDir ? 'Na⁺ alone' : 'your answer', kind: 'wrong' } as Line] : [])]} />;
   else if (step === 3 && (!icfChecked || shift === 'before'))
     diag = <Diagram {...stage2} showOsm lines={[naLine]} arrow={icfChecked ? truthIcfDir : icfGuess ?? null} arrowGuess={!icfChecked} />;
   else if (step === 3) diag = <Diagram {...final} arrow={truthIcfDir} preEcf={truthIcfDir !== 0 ? pre : null} />;
@@ -397,7 +399,7 @@ export default function BedsideFlow() {
             </dd></div>}
             {maxStep >= 2 && <div><dt>Labs</dt><dd>
               <span className="v">Na⁺ {labNa}</span>
-              <span className="v">Glucose {f0(L.glucose)}</span>
+              <span className="v">Glucose {f0(L.glucose)}{L.glucose > 300 && <b className="flag"> very high</b>}</span>
               {(tonChecked || maxStep > 2) && <span className="v">Tonicity {f0(L.effOsm)}</span>}
               <span className="v">Hct {f0(L.hct)}%</span>
             </dd></div>}
@@ -457,8 +459,8 @@ export default function BedsideFlow() {
 
           {step === 2 && (
             <div className="stepbox">
-              <h3>3 · Where does sodium put the line?</h3>
-              <p className="lead">Read Na⁺ and glucose in the Labs row above. Together they set the tonicity. Predict under the diagram; your answer is drawn on it.</p>
+              <h3>3 · Is sodium low, normal or high?</h3>
+              <p className="lead">Read Na⁺ in the Labs row above. Sodium sets the tonicity of the ECF. Your answer is drawn on the diagram.</p>
             </div>
           )}
 
@@ -557,7 +559,7 @@ export default function BedsideFlow() {
                 <ul className="tally">
                   <li className={result.danger ? 'y' : 'n'}>Danger</li>
                   <li className={result.vol ? 'y' : 'n'}>Wet or dry</li>
-                  <li className={result.osm ? 'y' : 'n'}>Tonicity line</li>
+                  <li className={result.osm ? 'y' : 'n'}>Sodium</li>
                   <li className={result.icf ? 'y' : 'n'}>Cells</li>
                   <li className={result.why ? 'y' : 'n'}>Cells: reason</li>
                   <li className={result.water ? 'y' : 'n'}>Kidney: water</li>
@@ -600,20 +602,19 @@ export default function BedsideFlow() {
 
           {step === 2 && (
             <div className="predict">
-              <p className="q">Using Na⁺ and glucose from the Labs row: where will both sides settle?</p>
-              <Choice label="Tonicity line" value={tonGuess} disabled={tonChecked}
-                options={[{ v: 1 as Snap, text: 'Above normal' }, { v: 0 as Snap, text: 'At normal' }, { v: -1 as Snap, text: 'Below normal' }]}
+              <p className="q">Na⁺ is {labNa} (normal 135–145). Is it low, normal or high?</p>
+              <Choice label="Sodium" value={tonGuess} disabled={tonChecked}
+                options={[{ v: -1 as Snap, text: 'Low' }, { v: 0 as Snap, text: 'Normal' }, { v: 1 as Snap, text: 'High' }]}
                 onPick={pickTon} />
               {!tonChecked && <>
                 <p className="hint">{tonGuess == null ? 'Pick one. Your prediction is drawn on the diagram.' : 'Your prediction is drawn dashed on the diagram.'}</p>
                 <button className="primary" disabled={tonGuess == null}
-                  onClick={() => { setTonChecked(true); record({ osm: tonGuess === truthTonDir }); }}>Check</button>
+                  onClick={() => { setTonChecked(true); record({ osm: tonGuess === naDir }); }}>Check</button>
               </>}
               {tonChecked && <>
-                <div className="formula mono">tonicity ≈ 2 × Na⁺ + glucose/18 = {f0(2 * labNa)} + {f0(gluC)} = <b>{f0(2 * labNa + gluC)}</b> (normal 285)</div>
-                <Verdict ok={tonGuess === truthTonDir}>{L.glucose > 300
-                  ? <>Na⁺ is low, but glucose pushes tonicity <b>above</b> normal. Sodium alone would have fooled you.</>
-                  : <>Na⁺ {labNa} puts tonicity {truthTonDir > 0 ? 'above' : truthTonDir < 0 ? 'below' : 'at'} normal. The blue line is where both sides will settle once water moves.</>}</Verdict>
+                <Verdict ok={tonGuess === naDir}>{L.glucose > 300
+                  ? <>Na⁺ {labNa} is {DIRWORD[naDir]}. But glucose is very high, and glucose also pulls water, so the tonicity is actually <b>high</b>. The blue line is where both sides will settle once water moves.</>
+                  : <>Na⁺ {labNa} is {DIRWORD[naDir]}, so the tonicity is {naDir > 0 ? 'above' : naDir < 0 ? 'below' : 'at'} normal. The blue line is where both sides will settle once water moves.</>}</Verdict>
                 <div className="row"><button className="primary" onClick={() => go(3)}>Predict the cells</button>{resetBtn(2)}</div>
               </>}
             </div>

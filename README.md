@@ -8,7 +8,7 @@ Interactive case activity for teaching fluid compartments, tonicity and water sh
 Six steps in bedside order, on a live Darrow–Yannet diagram:
 1. Danger (brain, circulation)
 2. Wet or dry (exam → ECF volume)
-3. Where does sodium put the tonicity line? (glucose included; scored)
+3. Is sodium low, normal or high? (glucose explained in feedback when very high)
 4. Predict the cells (water in, out or no shift; drawn on the diagram)
 5. Read the kidney (urine osm and Na⁺ → cause)
 6. Treatment (where salt and water should go, then a fluid)
