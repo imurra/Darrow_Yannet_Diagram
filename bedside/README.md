@@ -12,7 +12,7 @@ There is no treatment step. Scored out of 9 per case.
 
 Each step has a Reset button; only the first answer is scored. 
 4 core cases: diarrhea, SIADH, heart failure, hyperglycemia.
-Extra practice (optional, shown after the core cases): marathon runner, Addison's, elderly dehydration, lithium DI.
+Extra practice (optional, not yet clinician-reviewed; reached from the "Extra practice" button or the end of case 4, not the case menu): marathon runner, Addison's, elderly dehydration, lithium DI.
 
 `index.html` is self-contained and works offline: open it in a browser or host it with GitHub Pages.
 

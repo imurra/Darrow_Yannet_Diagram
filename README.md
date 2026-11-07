@@ -14,7 +14,7 @@ Six steps in bedside order, on a live Darrow–Yannet diagram:
 6. Treatment (where salt and water should go, then a fluid)
 
 4 core cases: diarrhea, SIADH, heart failure, hyperglycemia.
-Extra practice (optional): marathon runner, Addison's, elderly dehydration, lithium DI.
+Extra practice (optional, not yet clinician-reviewed; separate from the case menu): marathon runner, Addison's, elderly dehydration, lithium DI.
 `bedside/index.html` is self-contained and works offline.
 
 ## Hosting

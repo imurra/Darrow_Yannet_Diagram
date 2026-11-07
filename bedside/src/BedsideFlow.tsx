@@ -14,7 +14,7 @@ const NORMAL_TON = 285;
 const CORE = CASES.filter(k => !k.optional).length;
 const caseLabel = (i: number) => i < CORE
   ? `Case ${i + 1} of ${CORE}`
-  : `Optional case ${i - CORE + 1} of ${CASES.length - CORE}`;
+  : `Extra practice ${i - CORE + 1} of ${CASES.length - CORE} · not yet clinician-reviewed`;
 const TON_SNAPS: Record<-1 | 0 | 1, number> = { [-1]: 250, 0: NORMAL_TON, 1: 320 };
 
 type Snap = -1 | 0 | 1;
@@ -250,6 +250,7 @@ export default function BedsideFlow() {
   const [flash, setFlash] = useState(0);
   const [history, setHistory] = useState<Record<string, Result>>({});
   const [showRef, setShowRef] = useState(false);
+  const [showExtra, setShowExtra] = useState(false);
   const [why, setWhy] = useState<Snap>();             // reason for the cell prediction: 1 ECF lower, -1 ECF higher, 0 equal
   const [order, setOrder] = useState<number[]>([]);   // chain links in the order tapped
   const [chainChecked, setChainChecked] = useState(false);
@@ -352,14 +353,17 @@ export default function BedsideFlow() {
         <label className="casepick">
           <span>Case</span>
           <select id="case-select" value={ci} onChange={e => reset(Number(e.target.value))}>
-            <optgroup label={`Core cases (${CORE})`}>
-              {CASES.map((k, i) => !k.optional && <option key={k.id} value={i}>{i + 1}. {k.title}</option>)}
-            </optgroup>
-            <optgroup label="Extra practice (optional)">
-              {CASES.map((k, i) => k.optional && <option key={k.id} value={i}>Optional {i - CORE + 1}. {k.title}</option>)}
-            </optgroup>
+            {CASES.map((k, i) => !k.optional && <option key={k.id} value={i}>{i + 1}. {k.title}</option>)}
+            {c.optional && <option value={ci} disabled>Extra: {c.title}</option>}
           </select>
         </label>
+        <div className="extrapick">
+          <button className="linkbtn" aria-expanded={showExtra} onClick={() => setShowExtra(x => !x)}>Extra practice (optional)</button>
+          {showExtra && <div className="extramenu">
+            <p className="hint">Not yet reviewed by clinicians. About 5 min each.</p>
+            {CASES.map((k, i) => k.optional && <button key={k.id} className="ghostbtn small" onClick={() => { setShowExtra(false); setShowRef(false); reset(i); }}>{k.title}</button>)}
+          </div>}
+        </div>
       </header>
 
       <ol className="progress" aria-label="Steps">
@@ -563,7 +567,7 @@ export default function BedsideFlow() {
                 </ul>
                 <p className="hint">{done} of {CORE} core cases done.</p>
                 {ci === CORE - 1 && <div className="extras">
-                  <p><b>End of the core cases.</b> Extra practice (optional, about 5 min each):</p>
+                  <p><b>End of the core cases.</b> Extra practice (optional, about 5 min each; not yet reviewed by clinicians):</p>
                   <div className="row">{CASES.map((k, i) => k.optional && <button key={k.id} className="ghostbtn small" onClick={() => reset(i)}>{k.title}</button>)}</div>
                 </div>}
                 <div className="row">

@@ -221,3 +221,8 @@ footer { font-size: 12px; color: var(--muted); }
 .ghostbtn.small:hover { border-color: var(--accent); color: var(--accent); }
 .reftable tr.optrow td { color: var(--muted); }
 button.ghostbtn { background: transparent; cursor: pointer; font: inherit; font-weight: 700; }
+.extrapick { position: relative; }
+.extramenu { position: absolute; right: 0; top: 100%; z-index: 20; margin-top: 6px; width: 280px; padding: 10px; display: flex; flex-direction: column; gap: 6px; background: var(--panel); border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 6px 20px rgba(0,0,0,.15); }
+.extramenu .hint { margin: 0 0 4px; }
+@media (max-width: 720px) { .extramenu { left: 0; right: auto; } }
+.extramenu .ghostbtn.small { text-align: left; justify-content: flex-start; }
