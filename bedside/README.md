@@ -17,7 +17,7 @@ Each step has a Reset button; only the first answer is scored.
 
 ## Source
 - `src/engine.ts` — mass-balance model (salt, glucose, urea; ICF solute fixed)
-- `src/cases.ts` — case library, expected answers and treatment grades
+- `src/cases.ts` — case library, expected answers, causal chains and debriefs (treatment grades kept as data but not shown)
 - `src/BedsideFlow.tsx` — React interface
 - `src/styles.css` — styles (light and dark)
 
