@@ -459,7 +459,7 @@ export default function BedsideFlow() {
 
           {step === 2 && (
             <div className="stepbox">
-              <h3>3 · Is sodium low, normal or high?</h3>
+              <h3>3 · Read the sodium</h3>
               <p className="lead">Read Na⁺ in the Labs row above. Sodium sets the tonicity of the ECF. Your answer is drawn on the diagram.</p>
             </div>
           )}
@@ -602,7 +602,7 @@ export default function BedsideFlow() {
 
           {step === 2 && (
             <div className="predict">
-              <p className="q">Na⁺ is {labNa}. Is it low, normal or high?</p>
+              <p className="q">Na⁺ is {labNa}. This sodium is:</p>
               <details className="hintbox">
                 <summary>Hint: normal Na⁺</summary>
                 <p>Reference range: 135–145 mmol/L.</p>
