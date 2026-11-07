@@ -602,7 +602,11 @@ export default function BedsideFlow() {
 
           {step === 2 && (
             <div className="predict">
-              <p className="q">Na⁺ is {labNa} (normal 135–145). Is it low, normal or high?</p>
+              <p className="q">Na⁺ is {labNa}. Is it low, normal or high?</p>
+              <details className="hintbox">
+                <summary>Hint: normal Na⁺</summary>
+                <p>Reference range: 135–145 mmol/L.</p>
+              </details>
               <Choice label="Sodium" value={tonGuess} disabled={tonChecked}
                 options={[{ v: -1 as Snap, text: 'Low' }, { v: 0 as Snap, text: 'Normal' }, { v: 1 as Snap, text: 'High' }]}
                 onPick={pickTon} />
