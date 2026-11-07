@@ -11,7 +11,8 @@ Interactive case activity that follows the bedside order:
 There is no treatment step. Scored out of 9 per case.
 
 Each step has a Reset button; only the first answer is scored. 
-8 cases: diarrhea, marathon runner, SIADH, heart failure, Addison's, elderly dehydration, lithium DI, hyperglycemia.
+4 core cases: diarrhea, SIADH, heart failure, hyperglycemia.
+Extra practice (optional, shown after the core cases): marathon runner, Addison's, elderly dehydration, lithium DI.
 
 `index.html` is self-contained and works offline: open it in a browser or host it with GitHub Pages.
 

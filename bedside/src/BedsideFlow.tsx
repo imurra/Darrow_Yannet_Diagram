@@ -10,6 +10,11 @@ import { CASES, Danger, Vol } from './cases';
 const CARD_URL = 'card.html';
 const STEPS = ['Danger', 'Wet or dry', 'Sodium', 'Cells', 'Kidney', 'Debrief'];
 const NORMAL_TON = 285;
+// Core cases come first in CASES; the rest are optional extra practice.
+const CORE = CASES.filter(k => !k.optional).length;
+const caseLabel = (i: number) => i < CORE
+  ? `Case ${i + 1} of ${CORE}`
+  : `Optional case ${i - CORE + 1} of ${CASES.length - CORE}`;
 const TON_SNAPS: Record<-1 | 0 | 1, number> = { [-1]: 250, 0: NORMAL_TON, 1: 320 };
 
 type Snap = -1 | 0 | 1;
@@ -213,7 +218,7 @@ function Reference({ onClose }: { onClose: () => void }) {
       <table className="reftable"><thead><tr><th>Case</th><th>What happened</th><th>Learn more</th></tr></thead><tbody>
         {CASES.map((k, i) => {
           const more = LEARN[k.id];
-          return <tr key={k.id}><td>{i + 1}. {k.title}</td><td>{k.debrief.what}</td><td>{more && <a href={more.url} target="_blank" rel="noopener">{more.text}</a>}</td></tr>;
+          return <tr key={k.id} className={k.optional ? 'optrow' : undefined}><td>{k.optional ? `Optional ${i - CORE + 1}` : i + 1}. {k.title}</td><td>{k.debrief.what}</td><td>{more && <a href={more.url} target="_blank" rel="noopener">{more.text}</a>}</td></tr>;
         })}
       </tbody></table>
 
@@ -347,7 +352,12 @@ export default function BedsideFlow() {
         <label className="casepick">
           <span>Case</span>
           <select id="case-select" value={ci} onChange={e => reset(Number(e.target.value))}>
-            {CASES.map((k, i) => <option key={k.id} value={i}>{i + 1}. {k.title}</option>)}
+            <optgroup label={`Core cases (${CORE})`}>
+              {CASES.map((k, i) => !k.optional && <option key={k.id} value={i}>{i + 1}. {k.title}</option>)}
+            </optgroup>
+            <optgroup label="Extra practice (optional)">
+              {CASES.map((k, i) => k.optional && <option key={k.id} value={i}>Optional {i - CORE + 1}. {k.title}</option>)}
+            </optgroup>
           </select>
         </label>
       </header>
@@ -370,7 +380,7 @@ export default function BedsideFlow() {
       <div className="layout" hidden={showRef}>
         <section className="panel" aria-live="polite">
           <div className="story">
-            <div className="eyebrow">Case {ci + 1} of {CASES.length}</div>
+            <div className={c.optional ? 'eyebrow opt' : 'eyebrow'}>{caseLabel(ci)}</div>
             <h2>{c.title}</h2>
             <p>{c.story}</p>
           </div>
@@ -494,7 +504,7 @@ export default function BedsideFlow() {
 
           {step === 5 && (() => {
             const s = scoreOf(result);
-            const done = Object.keys({ ...history, [c.id]: result }).length;
+            const done = Object.keys({ ...history, [c.id]: result }).filter(id => CASES.some(k => k.id === id && !k.optional)).length;
             return (
               <div className="stepbox">
                 <h3>6 · Put the story together</h3>
@@ -551,9 +561,14 @@ export default function BedsideFlow() {
                   <li className={result.role ? 'y' : 'n'}>Kidney: homeostatic or problem</li>
                   <li className={result.chain ? 'y' : result.chain === false ? 'n' : ''}>Causal chain</li>
                 </ul>
-                <p className="hint">{done} of {CASES.length} cases done.</p>
+                <p className="hint">{done} of {CORE} core cases done.</p>
+                {ci === CORE - 1 && <div className="extras">
+                  <p><b>End of the core cases.</b> Extra practice (optional, about 5 min each):</p>
+                  <div className="row">{CASES.map((k, i) => k.optional && <button key={k.id} className="ghostbtn small" onClick={() => reset(i)}>{k.title}</button>)}</div>
+                </div>}
                 <div className="row">
-                  {ci < CASES.length - 1 && <button className="primary" onClick={() => reset(ci + 1)}>Next case</button>}
+                  {ci < CORE - 1 && <button className="primary" onClick={() => reset(ci + 1)}>Next case</button>}
+                  {ci >= CORE && ci < CASES.length - 1 && <button className="ghostbtn" onClick={() => reset(ci + 1)}>Next optional case</button>}
                   <a className="ghostbtn" href={CARD_URL}>Post-activity: Darrow–Yannet, read backward</a>
                 </div>
                 </>}

@@ -13,7 +13,8 @@ Six steps in bedside order, on a live Darrow–Yannet diagram:
 5. Read the kidney (urine osm and Na⁺ → cause)
 6. Treatment (where salt and water should go, then a fluid)
 
-8 cases: diarrhea, marathon runner, SIADH, heart failure, Addison's, elderly dehydration, lithium DI, hyperglycemia.
+4 core cases: diarrhea, SIADH, heart failure, hyperglycemia.
+Extra practice (optional): marathon runner, Addison's, elderly dehydration, lithium DI.
 `bedside/index.html` is self-contained and works offline.
 
 ## Hosting
