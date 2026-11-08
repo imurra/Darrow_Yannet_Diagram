@@ -32,7 +32,7 @@ svg { flex: 0 0 132px; }
   <header style="display:flex;justify-content:space-between;align-items:flex-end;gap:24px;padding-bottom:12px;border-bottom:2px solid #1e2430">
     <div style="display:flex;flex-direction:column;gap:4px">
       <h1 class="serif" style="margin:0;font-size:32px;line-height:1.05">Darrow–Yannet, read backward</h1>
-      <p class="muted" style="margin:0;font-size:15px">Same three questions. Physiology asks them from the cause; the clinic asks them from the labs and exam.</p>
+      <p class="muted" style="margin:0;font-size:15px">Sodium is two problems, not one. The <b>amount</b> of sodium sets ECF volume and threatens the <b>circulation</b>; its <b>concentration</b> sets tonicity and threatens the <b>brain</b>.</p>
     </div>
     <div class="muted" style="display:flex;gap:14px;align-items:center;font-size:12px;white-space:nowrap">
       <span style="display:flex;gap:6px;align-items:center"><span style="width:14px;height:14px;background:#f2a7b0"></span>ICF (cells)</span>
@@ -47,13 +47,15 @@ svg { flex: 0 0 132px; }
         <div class="kick">Ask in order</div>
         <div style="display:grid;grid-template-columns:26px minmax(0,1fr);gap:2px 10px;align-items:baseline">
           <span class="serif" style="font-size:22px;color:#2f5d9e">1</span>
-          <div><b>ECF volume up or down?</b><br><span class="muted">Bedside: orthostatics, JVP, edema, mucous membranes, weight.</span></div>
+          <div><b>Brain or circulation in danger?</b><br><span class="muted">Circulation → volume. Brain → tonicity.</span></div>
           <span class="serif" style="font-size:22px;color:#2f5d9e">2</span>
-          <div><b>ECF osmolarity up or down?</b><br><span class="muted">Bedside: serum Na⁺. Check glucose and measured osm first.</span></div>
+          <div><b>ECF volume up or down?</b><br><span class="muted">Bedside: orthostatics, JVP, edema, mucous membranes, weight.</span></div>
           <span class="serif" style="font-size:22px;color:#2f5d9e">3</span>
-          <div><b>Water into or out of cells?</b><br><span class="muted">Na⁺ low → cells swell. Na⁺ high → cells shrink. Brain cells are the ones that matter.</span></div>
-          <span class="serif" style="font-size:22px;color:#c46a2b">4</span>
-          <div><b>What is the kidney doing?</b><br><span class="muted">Not on the diagram. Read it from the urine.</span></div>
+          <div><b>Is Na⁺ low, normal or high?</b><br><span class="muted">A concentration: tonicity, not volume. Check glucose.</span></div>
+          <span class="serif" style="font-size:22px;color:#2f5d9e">4</span>
+          <div><b>Water into or out of cells?</b><br><span class="muted">Low tonicity → swell; high → shrink. Brain cells matter most.</span></div>
+          <span class="serif" style="font-size:22px;color:#c46a2b">5</span>
+          <div><b>What is the kidney doing?</b><br><span class="muted">Read it from the urine.</span></div>
         </div>
       </div>
 
@@ -69,7 +71,7 @@ svg { flex: 0 0 132px; }
 
       <div style="display:flex;flex-direction:column;gap:4px">
         <div class="kick">Traps</div>
-        <div><b>High glucose</b> lowers Na⁺ while cells <i>shrink</i>: osmolarity is up, not down.</div>
+        <div><b>High glucose</b> lowers Na⁺ while cells <i>shrink</i>: tonicity is up, not down.</div>
         <div><b>SIADH looks euvolemic.</b> Only a third of retained water stays in the ECF.</div>
         <div><b>Perfusion beats tonicity.</b> Low effective volume turns ADH on even when Na⁺ is low.</div>
       </div>
@@ -113,7 +115,7 @@ svg { flex: 0 0 132px; }
   </div>
 
   <footer class="muted" style="display:flex;justify-content:space-between;font-size:12px;border-top:1px solid #c9cdd4;padding-top:8px">
-    <span>Rows = what serum Na⁺ says about the cells. Columns = what the exam says about the ECF.</span>
+    <span>Rows = what tonicity (Na⁺, plus glucose) says about the cells. Columns = what the exam says about the ECF.</span>
     <span>© Ian V. J. Murray · CC BY-NC-SA 4.0</span>
   </footer>
 </div>
