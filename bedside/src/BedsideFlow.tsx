@@ -333,6 +333,7 @@ export default function BedsideFlow() {
     if (n === 3) { setIcfGuess(undefined); setWhy(undefined); setIcfChecked(false); showShift('after'); }
     if (n === 0) setDangerPick(undefined);
     if (n === 4) { setWater(undefined); setSalt(undefined); setRole(undefined); setKidneyChecked(false); }
+    if (n === 5) { setOrder([]); setChainChecked(false); }
   };
   const resetBtn = (n: number) => (
     <button className="linkbtn" onClick={() => redo(n)} title="Clear your answer to this step and try again. Your first answer is still the one scored.">Reset this step</button>
@@ -543,6 +544,7 @@ export default function BedsideFlow() {
                   </div>}
                   {chainChecked && <Verdict ok={order.every((k, i) => k === i)}>{order.every((k, i) => k === i)
                     ? 'Each link causes the next.' : 'Read the corrected chain: each link causes the next.'}</Verdict>}
+                  {chainChecked && <div className="row">{resetBtn(5)}</div>}
                 </div>
                 {chainChecked && <>
                 <div className="debrief">
